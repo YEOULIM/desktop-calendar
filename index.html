@@ -300,6 +300,8 @@ body.dragging .ev-bar{pointer-events:none}
 .sscroll button:disabled{opacity:.3}
 .sscroll svg{width:16px;height:16px}
 
+#syPw::-ms-reveal,#syPw::-ms-clear{display:none}
+
 /* 카테고리 */
 .cats h3{margin-bottom:4px}
 .cat-fold{border:0;background:transparent;padding:0;font-weight:700;font-size:inherit;display:flex;gap:4px;align-items:center;color:var(--ink)}
@@ -672,7 +674,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
           <div class="row"><label>연결된 프로젝트<small id="syncProj"></small></label><button class="btn danger" id="syncReset">연결 해제</button></div>
           <div id="syncLoggedOut">
             <div class="row"><label>이메일</label><input class="field" type="email" id="syEmail" autocomplete="username" style="flex:2"></div>
-            <div class="row"><label>비밀번호</label><input class="field" type="password" id="syPw" autocomplete="current-password" style="flex:2"></div>
+            <div class="row"><label>비밀번호</label><div style="flex:2;display:flex;gap:6px"><input class="field" type="password" id="syPw" autocomplete="current-password" style="flex:1"><button class="btn ghost sm" type="button" id="syPwShow" aria-label="비밀번호 보기">보기</button></div></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="sySignup">계정 만들기</button><button class="btn" id="syLogin">로그인</button></div>
           </div>
           <div id="syncLoggedIn" class="hidden">
@@ -2036,6 +2038,8 @@ $('#syLogin').onclick = () => { if (!Sync.ready) return Sync.msg('아직 연결 
   Sync.auth.signInWithEmailAndPassword($('#syEmail').value.trim(), $('#syPw').value).catch(e => Sync.authError(e)); };
 $('#sySignup').onclick = () => { if (!Sync.ready) return Sync.msg('아직 연결 중이에요. 잠시 후 다시 눌러주세요.'); Sync.msg('');
   Sync.auth.createUserWithEmailAndPassword($('#syEmail').value.trim(), $('#syPw').value).catch(e => Sync.authError(e)); };
+$('#syPwShow').addEventListener('mousedown', e => e.preventDefault());
+$('#syPwShow').onclick = () => { const p = $('#syPw'), show = p.type === 'password'; p.type = show ? 'text' : 'password'; $('#syPwShow').textContent = show ? '숨기기' : '보기'; };
 // 로그인 칸: 이메일에서 Enter → 비밀번호로, 비밀번호에서 Enter → 바로 로그인
 $('#syEmail').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); $('#syPw').focus(); } });
 $('#syPw').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); $('#syPw').blur(); $('#syLogin').click(); } });
