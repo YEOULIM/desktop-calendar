@@ -2036,6 +2036,9 @@ $('#syLogin').onclick = () => { if (!Sync.ready) return Sync.msg('아직 연결 
   Sync.auth.signInWithEmailAndPassword($('#syEmail').value.trim(), $('#syPw').value).catch(e => Sync.authError(e)); };
 $('#sySignup').onclick = () => { if (!Sync.ready) return Sync.msg('아직 연결 중이에요. 잠시 후 다시 눌러주세요.'); Sync.msg('');
   Sync.auth.createUserWithEmailAndPassword($('#syEmail').value.trim(), $('#syPw').value).catch(e => Sync.authError(e)); };
+// 로그인 칸: 이메일에서 Enter → 비밀번호로, 비밀번호에서 Enter → 바로 로그인
+$('#syEmail').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); $('#syPw').focus(); } });
+$('#syPw').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); $('#syPw').blur(); $('#syLogin').click(); } });
 $('#syLogout').onclick = () => Sync.auth && Sync.auth.signOut();
 
 /* ======================== 할 일 하나만 스타일 ======================== */
