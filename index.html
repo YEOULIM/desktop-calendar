@@ -59,7 +59,9 @@ body.side-left .side{order:1} body.side-left .cal{order:3}
 #splitter::after{content:"";position:absolute;left:5px;top:50%;width:4px;height:48px;margin-top:-24px;border-radius:3px;background:var(--ink-3);opacity:0;transition:opacity .2s}
 #app:hover #splitter::after{opacity:.35}
 #splitter:hover::after,#splitter.drag::after{background:var(--accent);opacity:1}
-#grip{display:none;position:absolute;right:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;touch-action:none;z-index:5;border-right:2.5px solid var(--ink-3);border-bottom:2.5px solid var(--ink-3);border-radius:0 0 10px 0;opacity:.5}
+#grip{display:none;position:absolute;right:0;bottom:0;width:28px;height:28px;cursor:nwse-resize;touch-action:none;z-index:5;border-right:3px solid var(--ink-3);border-bottom:3px solid var(--ink-3);border-radius:0 0 18px 0;opacity:.55;background:linear-gradient(135deg,transparent 55%,rgb(var(--glass-rgb) / .01) 55%)}
+#grip.follow,#splitter.follow::after{opacity:1;border-color:var(--accent);background:var(--accent)}
+#grip.follow{background:transparent;box-shadow:0 0 0 4px var(--accent-soft)}
 #grip:hover,#grip.drag{opacity:1;border-color:var(--accent)}
 body.widget #grip{display:block}
 body.widget{overflow:hidden}
@@ -290,6 +292,13 @@ body.dragging .ev-bar{pointer-events:none}
 #tip p:empty{display:none}
 #tip p{margin-top:10px!important;padding-top:8px;border-top:1px solid var(--line)}
 #tip small{display:block;color:var(--ink-3);font-size:calc(11.5px*var(--fs));margin:-2px 0 4px}
+
+.sscroll{position:sticky;bottom:-20px;align-self:flex-end;display:none;flex-direction:column;gap:4px;margin:-8px -8px -12px 0;z-index:6}
+.side.can-scroll .sscroll{display:flex}
+.sscroll button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line-2);background:rgb(var(--glass-rgb) / .97);box-shadow:0 4px 14px -4px rgba(0,0,0,.25);color:var(--ink-2);display:grid;place-items:center;padding:0}
+.sscroll button:hover{color:var(--accent);border-color:var(--accent)}
+.sscroll button:disabled{opacity:.3}
+.sscroll svg{width:16px;height:16px}
 
 /* 카테고리 */
 .cats h3{margin-bottom:4px}
@@ -1206,6 +1215,12 @@ function progress(items) {
   const n = items.length, d = items.filter(x => x.done).length;
   return { txt: n ? `${d}/${n}` : '', pct: n ? d / n * 100 : 0 };
 }
+function updateSideScroll() {
+  const sd = $('#side'), can = sd.scrollHeight > sd.clientHeight + 4;
+  sd.classList.toggle('can-scroll', can);
+  const up = sd.querySelector('[data-ss="-1"]'), dn = sd.querySelector('[data-ss="1"]');
+  if (up) up.disabled = sd.scrollTop < 4; if (dn) dn.disabled = sd.scrollTop + sd.clientHeight >= sd.scrollHeight - 4;
+}
 function renderSide() {
   const d = sel, info = dayInfo(d), k = info.k;
   const wk = isoWeek(d), mon = monday(d), sun = addDays(mon, 6);
@@ -1277,7 +1292,9 @@ function renderSide() {
         <button class="icon-btn" data-open="routine" aria-label="반복 작업 추가·관리" title="반복 작업 추가·관리 (삭제)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
       ${routinesAll.length ? [['매일 반복', x => x.freq === 'daily' || x.freq === 'weekdays'], ['매주 반복', x => x.freq === 'weekly'], ['매월 반복', x => x.freq === 'monthly']].map(([label, f]) => { const g = routinesAll.filter(f); return g.length ? `<div class="rgroup">${label} <span style="font-weight:500">${g.length}</span></div><ul class="todos">${g.map(r => `<li class="todo" style="cursor:pointer" title="눌러서 수정" data-kind="routine" data-rid="${r.id}"><span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span><small style="color:var(--ink-3);font-size:calc(11px*var(--fs))">${freqLabel(r)}</small><span class="acts"><button data-rdelx title="반복 작업 삭제" aria-label="반복 작업 삭제">✕</button></span></li>`).join('')}</ul>` : ''; }).join('')
         : '<div class="empty">매일·매주 반복하는 일을 등록하면 달력에 자동으로 표시돼요.</div>'}
-    </div>`;
+    </div>
+    <div class="sscroll" aria-label="패널 스크롤"><button data-ss="-1" title="위로 (마우스를 올려두면 계속 올라가요)" aria-label="위로"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 10 4-4 4 4"/></svg></button><button data-ss="1" title="아래로 (마우스를 올려두면 계속 내려가요)" aria-label="아래로"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 6 4 4 4-4"/></svg></button></div>`;
+  requestAnimationFrame(updateSideScroll);
 }
 
 /* ======================== 이벤트: 달력·할 일 ======================== */
@@ -2489,36 +2506,68 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !e.target.closest('dialog')) { e.preventDefault(); $('#q').focus(); $('#q').select(); }
 });
 
+/* ======================== 왼쪽 패널 스크롤 (휠 대신 버튼·마우스 올려두기) ======================== */
+{
+  const sd = $('#side'); let hoverT = null, loop = null;
+  const stop = () => { clearTimeout(hoverT); clearInterval(loop); loop = null; };
+  sd.addEventListener('scroll', updateSideScroll, { passive: true });
+  sd.addEventListener('click', e => { const b = e.target.closest('[data-ss]'); if (!b) return; stop(); sd.scrollBy({ top: +b.dataset.ss * sd.clientHeight * 0.7, behavior: 'smooth' }); });
+  sd.addEventListener('mouseover', e => {
+    const b = e.target.closest('[data-ss]'); if (!b || loop) return;
+    clearTimeout(hoverT); hoverT = setTimeout(() => { loop = setInterval(() => { sd.scrollTop += +b.dataset.ss * 7; updateSideScroll(); }, 16); }, 350);
+  });
+  sd.addEventListener('mouseout', e => { if (e.target.closest('[data-ss]') && !e.target.closest('[data-ss]').contains(e.relatedTarget)) stop(); });
+  window.addEventListener('resize', updateSideScroll);
+}
+
 /* ======================== 크기 드래그 ======================== */
-// 바탕화면(Lively)에서는 포인터 캡처가 안 먹을 수 있어서 창 전체에서 움직임을 받음
-function dragger(el, onMove) {
+// 크기 조절: ① 누른 채로 끌기  ② 한 번 클릭 → 마우스를 움직여 맞추고 → 다시 클릭
+// (바탕화면 Lively에서는 끌기가 막히거나 커서 모양이 안 바뀔 수 있어서 ②도 지원)
+let resizing = null;
+function dragger(el, onMove, hint) {
   el.addEventListener('pointerdown', e => {
-    e.preventDefault(); el.classList.add('drag');
+    if (resizing) return;
+    e.preventDefault(); e.stopPropagation(); el.classList.add('drag');
     try { el.setPointerCapture(e.pointerId); } catch {}
-    const r = $('#app').getBoundingClientRect(), cur = getComputedStyle(el).cursor;
-    document.body.style.cursor = cur; document.body.style.userSelect = 'none';
-    const move = ev => onMove(ev, r);
-    const up = () => {
-      el.classList.remove('drag'); document.body.style.cursor = ''; document.body.style.userSelect = '';
+    const r = $('#app').getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+    let moved = false, follow = false;
+    document.body.style.cursor = getComputedStyle(el).cursor; document.body.style.userSelect = 'none';
+    const move = ev => { if (!follow && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) moved = true; if (moved || follow) onMove(ev, r); };
+    const finish = () => {
+      resizing = null; el.classList.remove('drag', 'follow'); document.body.style.cursor = ''; document.body.style.userSelect = '';
       ['pointermove', 'mousemove'].forEach(t => window.removeEventListener(t, move));
-      ['pointerup', 'mouseup', 'pointercancel', 'blur'].forEach(t => window.removeEventListener(t, up));
+      ['pointerup', 'mouseup', 'pointercancel'].forEach(t => window.removeEventListener(t, up));
+      window.removeEventListener('pointerdown', endClick, true); window.removeEventListener('keydown', endKey, true);
       store.set('ync-prefs', prefs); render(); releaseFocus();
     };
+    const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    const endClick = ev => { swallow(ev); window.addEventListener('click', swallow, { capture: true, once: true }); finish(); toast('크기를 저장했어요'); };
+    const endKey = ev => { if (ev.key === 'Escape' || ev.key === 'Enter') { swallow(ev); finish(); } };
+    const up = () => {
+      if (!moved && !follow) {   // 끌지 않고 클릭만 했으면 '따라가기' 모드로
+        follow = true; resizing = el; el.classList.add('follow');
+        ['pointerup', 'mouseup', 'pointercancel'].forEach(t => window.removeEventListener(t, up));
+        setTimeout(() => { window.addEventListener('pointerdown', endClick, true); window.addEventListener('keydown', endKey, true); }, 0);
+        toast(hint);
+        return;
+      }
+      finish();
+    };
     ['pointermove', 'mousemove'].forEach(t => window.addEventListener(t, move));
-    ['pointerup', 'mouseup', 'pointercancel', 'blur'].forEach(t => window.addEventListener(t, up));
+    ['pointerup', 'mouseup', 'pointercancel'].forEach(t => window.addEventListener(t, up));
   });
 }
 dragger($('#splitter'), (ev, r) => {
   const w = prefs.sideLeft ? ev.clientX - r.left - 7 : r.right - ev.clientX - 7;
   prefs.side = Math.round(Math.max(160, Math.min(w, r.width - 14 - 360)));
   applyGrid();
-});
+}, '마우스를 좌우로 움직여 너비를 맞춘 뒤 한 번 더 클릭하세요');
 $('#splitter').addEventListener('dblclick', () => { prefs.side = 300; savePrefs(); });
 dragger($('#grip'), (ev, r) => {
   prefs.ww = Math.round(Math.max(500, Math.min(ev.clientX - r.left, window.innerWidth - r.left))); prefs.wh = Math.round(Math.max(360, Math.min(ev.clientY - r.top, window.innerHeight - r.top)));
   applyGrid();
   document.body.style.setProperty('--ww', prefs.ww + 'px'); document.body.style.setProperty('--wh', prefs.wh + 'px');
-});
+}, '마우스를 움직여 크기를 맞춘 뒤 한 번 더 클릭하세요 (Esc로 끝내기)');
 
 /* ======================== 시작 ======================== */
 if (!state.evMoved) {
