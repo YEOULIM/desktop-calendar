@@ -126,15 +126,15 @@ button.title:hover{background:var(--accent-soft)}
 .wk{font-size:calc(10.5px*var(--fs));color:var(--ink-3);padding:8px 0 0 4px;border-top:1px solid var(--line)}
 .cell{position:relative;border-top:1px solid var(--line);padding:6px 7px 4px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;gap:1px;min-height:0;user-select:none;-webkit-user-select:none}
 .cell:hover{background:rgb(var(--glass-rgb) / .35)}
-.cell.sel{background:var(--accent-soft);border-radius:10px}
+.cell.sel{background:rgb(var(--glass-rgb) / .55);box-shadow:inset 0 0 0 1.5px var(--line-2);border-radius:10px}
 .cell.out{opacity:.38}
 .cell .top{display:flex;align-items:baseline;gap:5px}
 .cell .d{font-size:calc(13.5px*var(--fs-d));font-weight:650;min-width:calc(22px*var(--fs-d));height:calc(22px*var(--fs-d));display:inline-grid;place-items:center;border-radius:50%;margin:-2px 0 0 -3px}
 .cell.sun .d,.cell.kr-off .d{color:var(--kr)}
 .cell.sat:not(.kr-off) .d{color:var(--sat)}
-.cell.today{box-shadow:inset 0 0 0 2px var(--accent);border-radius:10px}
-.cell.today.colored.sel,.cell.today.sel{box-shadow:inset 0 0 0 2px var(--accent)}
-.cell.today .d{color:var(--accent);font-weight:800}
+/* 오늘: 항상 테두리 + 배경 (날짜 숫자 색은 요일·공휴일 색 그대로) */
+.cell.today,.cell.today.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent);border-radius:10px}
+.cell.today.colored{background:var(--dc)}
 .it{position:relative}
 .it .x{display:none;position:absolute;right:0;top:0;border:0;border-radius:5px;background:rgb(var(--glass-rgb) / .95);color:var(--ink-2);font-size:10.5px;line-height:1;padding:3px 5px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .it:hover .x{display:block}
@@ -282,7 +282,7 @@ body.dragging .ev-bar{pointer-events:none}
 
 .it .bell.rep{width:1em;height:1em;flex:none;margin-top:.15em}
 .ricon{width:.95em;height:.95em;vertical-align:-.12em;margin-right:5px;flex:none}
-.rgroup{font-size:calc(11.5px*var(--fs));font-weight:700;color:var(--ink-3);margin:8px 0 2px 2px}
+.rgroup{font-size:calc(13px*var(--fs));font-weight:700;color:var(--ink-2);margin:8px 0 2px 2px}
 .rgroup:first-of-type{margin-top:2px}
 .mtag{font-size:calc(10.5px*var(--fs));font-weight:800;color:var(--accent);margin-left:-2px}
 .pxset{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
@@ -301,6 +301,14 @@ body.dragging .ev-bar{pointer-events:none}
 .sscroll svg{width:16px;height:16px}
 
 #syPw::-ms-reveal,#syPw::-ms-clear{display:none}
+
+.walarm{cursor:pointer}
+.walarm .wbell{flex:none;width:17px;height:17px;margin:1px 0 0 5px;display:grid;place-items:center;color:var(--ink-2)}
+.walarm .wbell svg{width:14px;height:14px}
+.walarm .wtime,.walarm .txt{color:var(--ink)}
+.biz .todo.off .txt,.biz .todo.off .wtime{color:var(--ink)}
+.chk:disabled{opacity:.4;cursor:default}
+#side [data-sec] .add{margin-top:2px}
 
 /* 카테고리 */
 .cats h3{margin-bottom:4px}
@@ -456,9 +464,15 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
   .cell .lunar{font-size:calc(9.5px*var(--fs));line-height:1.2}
   .badge-work{position:absolute;top:4px;right:3px;font-size:calc(9px*var(--fs))}
   .cell .it,.cell .more,.hol .cn,.hol .sep{display:none}
-  .cell .hol{font-size:calc(9.5px*var(--fs))}
+  .cell .hol{display:none}
+  .cell .hol.haskr{display:block;margin-top:3px;background:var(--kr);color:#fff;border-radius:4px;padding:1px 4px;font-size:10px;line-height:1.5;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:clip}
+  .cell .hol.haskr .kr{color:#fff}
+  .cell .pill{margin-top:3px;border-radius:4px;padding:1px 4px;font-size:10px;line-height:1.5;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip}
+  .cell .pill.dark{color:#1d2230}
+  .cell .pill.done{opacity:.45;text-decoration:line-through}
+  .cell .d{font-size:calc(15px*var(--fs-d))}
   .dots{display:flex}
-  .grid{--barh:12px;--evtop:calc(8px + 22px*var(--fs-d) + 13px)} .ev-bar{font-size:9px;padding:0 3px;margin:0 1px}
+  .grid{--barh:17px;--evtop:calc(8px + 22px*var(--fs-d) + 13px)} .ev-bar{font-size:10px;padding:0 4px;margin:0 1px;border-radius:4px}
   .side{overflow:visible}
   .cal,body.side-left .cal{order:1} .side,body.side-left .side{order:3} #splitter,#grip,body.widget #grip{display:none}
   .todo .acts{position:static;opacity:1;pointer-events:auto;box-shadow:none;background:transparent}
@@ -1100,7 +1114,7 @@ function holidayLines(info) {
     info.kr.forEach(n => lines.push(`<span class="kr">${esc(n)}</span>`));
     if (cnOff && cnOff.first) lines.push(`<span class="cn">${esc(cnOff.name)}</span>`);
   }
-  return lines.map(l => `<div class="hol">${l}</div>`);
+  return lines.map(l => `<div class="hol${l.includes('class="kr"') ? ' haskr' : ''}">${l}</div>`);
 }
 
 function render() {
@@ -1157,19 +1171,25 @@ function render() {
       let body = hols.join('');
       const items = [
         ...(prefs.showAlarm ? alarmsShown(d).filter(a => !isWorkAlarm(a)).map(a => ({ t: `[${a.time}] ${a.t}`, alarm: true, kind: 'alarm', id: a.id, color: catOf(a).color })) : []),
-        ...info.routines.map(r => ({ t: r.t, done: !!info.rdone[r.id], color: catOf(r).color, routine: true, kind: 'routine', id: r.id })),
-        ...info.todos.map(t => ({ t: t.t, done: t.done, memo: t.memo, st: t.style, kind: 'todo', id: t.id, color: catOf(t).color, time: t.time }))
+        ...info.routines.map(r => ({ t: r.t, done: !!info.rdone[r.id], color: catOf(r).color, cid: catOf(r).id, routine: true, kind: 'routine', id: r.id })),
+        ...info.todos.map(t => ({ t: t.t, done: t.done, memo: t.memo, st: t.style, kind: 'todo', id: t.id, color: catOf(t).color, cid: catOf(t).id, time: t.time }))
       ];
       items.sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));   // 완료한 건 맨 아래로
+      const isPill = it => !isWide() && (it.kind === 'todo' || it.kind === 'routine') && it.cid !== 'work';   // 폰: 업무 외 일정은 색 막대
+      if (!isWide()) items.filter(isPill).forEach(it => { body += `<div class="pill${it.done ? ' done' : ''}${lum(it.color) > .5 ? ' dark' : ''}" style="background:${it.color}">${it.time ? it.time + ' ' : ''}${esc(it.t)}</div>`; });
       if (isWide()) items.forEach(it => {
         body += `<div class="it${it.done ? ' done' : ''}${it.routine ? ' routine' : ''}${it.alarm ? ' alarm' : ''}" data-kind="${it.kind}" data-id="${it.id}"${it.kind === 'todo' ? ' draggable="true"' : ''}${it.memo ? ` data-memo="${esc(it.memo)}" data-t="${esc(it.t)}"` : ''}>${it.alarm ? `<svg class="bell" style="color:${it.color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>` : it.routine ? `<svg class="bell rep" style="color:${it.color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>` : `<i class="dot" style="${it.color ? 'background:' + it.color : it.st && it.st.c ? 'background:' + it.st.c : ''}"></i>`}<span style="${it.done ? '' : itemStyle(it.st)}">${it.time ? `<b class="tm">${it.time}</b>` : ''}${esc(it.t)}${it.memo ? (prefs.showMemo ? `<span class="it-memo">${esc(it.memo)}</span>` : `<svg class="mm-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>`) : ''}</span><button class="x" title="${it.kind === 'todo' ? '삭제' : '이 날만 삭제'}" aria-label="삭제">✕</button></div>`;
       });
-      const dots = items.slice(0, 6).map(it => `<i style="${it.color ? 'background:' + it.color : it.alarm ? 'background:var(--accent)' : ''}${it.done ? ';opacity:.35' : ''}"></i>`).join('');
+      const dots = items.filter(it => !isPill(it)).slice(0, 6).map(it => `<i style="${it.color ? 'background:' + it.color : it.alarm ? 'background:var(--accent)' : ''}${it.done ? ';opacity:.35' : ''}"></i>`).join('');
       html += `<div class="${cls.join(' ')}" style="grid-row:${r + 1};grid-column:${c + colOff};${dc ? `--dc:${dc}` : ''}" data-k="${info.k}" role="button" tabindex="0" aria-label="${d.getMonth()+1}월 ${d.getDate()}일" title="더블클릭하면 이 칸에서 바로 할 일을 추가해요">
         <div class="top"><span class="d">${d.getDate()}</span>${prefs.rolling && d.getDate() === 1 ? `<span class="mtag">${d.getMonth() + 1}월</span>` : ''}${lun}${work}</div>${need[c] ? `<div class="ev-sp" style="height:calc(${need[c]}*(var(--barh) + 2px))"></div>` : ''}${body}<div class="dots">${dots}</div></div>`;
     }
   }
   grid.innerHTML = html + bars;
+  if (!isWide()) {   // 폰: 5주가 한 화면에 꽉 차게
+    const top = grid.getBoundingClientRect().top + window.scrollY;
+    grid.style.gridAutoRows = `minmax(${Math.max(78, Math.floor((window.innerHeight - top - 14) / rows))}px, auto)`;
+  } else grid.style.gridAutoRows = '';
   fitCells();
   renderSide();
 }
@@ -1218,14 +1238,21 @@ function itemStyle(st) {
   return [st.c ? `color:${st.c}` : '', f ? `font-family:${f.stack},sans-serif` : '', st.s ? `font-size:${st.s}em` : '', st.b ? 'font-weight:700' : ''].filter(Boolean).join(';');
 }
 const CHECK = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--on-accent)"><path d="m2.5 6.2 2.3 2.3 4.7-5"/></svg>';
-function listHTML(scope, bucket, items, emptyMsg) {
+let inlineAdd = null;   // + 버튼이나 더블클릭으로 연 입력칸
+const addBtn = (sec, title) => `<button class="icon-btn" data-addsec="${sec}" aria-label="${title}" title="${title} · 더블클릭해도 돼요"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button>`;
+function openAdd(sec) {
+  inlineAdd = sec; renderSide();
+  const inp = sec === 'biz' ? $('#side .add-biz') : $(`#side .add[data-scope="${sec}"]`);
+  if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest' }); }
+}
+function closeAdd() { if (!inlineAdd) return; inlineAdd = null; renderSide(); releaseFocus(); }
+function listHTML(scope, bucket, items) {
   const lis = items.map(t => `<li class="todo${t.done ? ' done' : ''}" style="--cc:${catOf(t).color}" data-scope="${scope}" data-b="${bucket}" data-id="${t.id}" draggable="true">
       <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
       <div class="tbody"><span class="txt" data-act="edit" style="${t.done ? '' : itemStyle(t.style)}">${t.time ? `<b class="tm">${t.time}</b>` : ''}${esc(t.t)}${t.from ? `<small class="from">${+t.from.slice(5, 7)}.${+t.from.slice(8)}부터</small>` : ''}</span>${t.memo ? `<div class="memo" data-act="memo" title="눌러서 수정">${esc(t.memo)}</div>` : ''}</div>
       <span class="acts"><button data-act="pen" class="${t.memo ? 'has' : ''}" title="할 일·메모 수정" aria-label="할 일과 메모 수정">${IC.note}</button>${scope === 'daily' ? '<button data-act="later" title="다음 날로 미루기" aria-label="다음 날로 미루기">↷</button>' : ''}<button data-act="del" title="삭제" aria-label="삭제">✕</button></span>
     </li>`).join('');
-  return `<ul class="todos">${lis || (emptyMsg ? `<li class="empty">${emptyMsg}</li>` : '')}</ul>
-    <input class="add" data-scope="${scope}" data-b="${bucket}" placeholder="할 일 추가 · ${esc(catOf({ cat: defaultCat() }).name)} (Enter)" enterkeyhint="done">`;
+  return `${lis ? `<ul class="todos">${lis}</ul>` : ''}${inlineAdd === scope ? `<input class="add" data-scope="${scope}" data-b="${bucket}" placeholder="입력 후 Enter · Esc로 닫기" enterkeyhint="done">` : ''}`;
 }
 function progress(items) {
   const n = items.length, d = items.filter(x => x.done).length;
@@ -1265,49 +1292,46 @@ function renderSide() {
         <button class="icon-btn" data-open="cats" aria-label="카테고리 추가·수정" title="카테고리 추가·수정"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
       ${catOpen ? `<ul class="catlist">${state.cats.map(c => `<li data-cat="${c.id}" class="${c.on === false ? 'off' : ''}"><button class="cbox" data-cattoggle style="--cc:${c.color}" aria-pressed="${c.on !== false}" aria-label="${esc(c.name)} 보이기">${CHECK}</button><span class="cname" data-cattoggle>${esc(c.name)}</span><button class="cedit" data-open="cats" title="카테고리 수정" aria-label="카테고리 수정">${IC.note}</button></li>`).join('')}</ul>` : ''}
     </div>
-    <div class="sec biz">
-      <h3>근무일 반복 <small>월~금 · 공휴일 제외${pb.txt ? ' · ' + pb.txt : ''}</small></h3>
-      <div class="prog"><b style="width:${pb.pct}%"></b></div>
-      ${bizDay ? (bizToday.length ? `<ul class="todos">${bizToday.map(r => `<li class="todo${r.done ? ' done' : ''}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}" data-biz="${r.id}" draggable="true" title="드래그해서 순서 바꾸기">
-          <span class="grip" aria-hidden="true">⋮⋮</span><button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
+    <div class="sec biz" data-sec="biz">
+      <h3>일일 루틴 <small>${pb.txt}</small>${addBtn('biz', '일일 루틴 추가 (15:30 포장처럼 시간을 앞에 쓰면 알림)')}</h3>
+      ${bizToday.length ? `<div class="prog"><b style="width:${pb.pct}%"></b></div>` : ''}
+      ${workAlarms.length ? `<ul class="todos">${workAlarms.map(a => `<li class="todo walarm${bizDay && a.on !== false ? '' : ' off'}" title="눌러서 수정" data-kind="alarm" data-rid="${a.id}"><span class="wbell">${IC.bell}</span><span class="txt"><span class="wtime">${a.time}</span> ${esc(a.t)}</span><span class="acts"><button data-rdelx title="알림 삭제" aria-label="알림 삭제">✕</button></span></li>`).join('')}</ul>` : ''}
+      ${(bizDay ? bizToday : bizAll).length ? `<ul class="todos">${(bizDay ? bizToday : bizAll).map(r => `<li class="todo${r.done ? ' done' : ''}${bizDay ? '' : ' off'}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}" data-biz="${r.id}" draggable="true" title="드래그해서 순서 바꾸기">
+          <span class="grip" aria-hidden="true">⋮⋮</span><button class="chk" ${bizDay ? 'data-act="toggle"' : 'disabled'} aria-label="완료 표시">${CHECK}</button>
           <div class="tbody"><span class="txt" data-bizedit="${r.id}" title="눌러서 수정">${esc(r.t)}</span></div>
-          <span class="acts"><button data-bizset="${r.id}" title="카테고리·종료일 설정" aria-label="설정">${IC.note}</button><button data-bizdel="${r.id}" title="삭제" aria-label="삭제">✕</button></span></li>`).join('')}</ul>` : '')
-        : `<div class="empty">주말·공휴일이라 쉬어요.${bizAll.length ? ` 근무일에 ${bizAll.length}개가 표시돼요.` : ''}</div>`}
-      <input class="add add-biz" placeholder="매일 업무 추가 (할 일을 끌어와도 돼요)" enterkeyhint="done">
-      <div class="rgroup" style="margin-top:12px">근무일 알림 <span style="font-weight:500">${workAlarms.length || ''}</span></div>
-      ${workAlarms.length ? `<ul class="todos">${workAlarms.map(a => `<li class="todo${bizDay ? '' : ' off'}" style="cursor:pointer" title="눌러서 수정" data-kind="alarm" data-rid="${a.id}"><span class="time" style="color:${a.on === false ? 'var(--ink-3)' : catOf(a).color}">${a.time}</span><span class="txt">${esc(a.t)}${a.on === false ? ' <small style="color:var(--ink-3)">(꺼짐)</small>' : ''}</span><span class="acts"><button data-rdelx title="알림 삭제" aria-label="알림 삭제">✕</button></span></li>`).join('')}</ul>` : ''}
-      <input class="add add-walarm" placeholder="근무일 알림 추가 (예: 15:30 포장)" enterkeyhint="done">
+          <span class="acts"><button data-bizset="${r.id}" title="카테고리·종료일 설정" aria-label="설정">${IC.note}</button><button data-bizdel="${r.id}" title="삭제" aria-label="삭제">✕</button></span></li>`).join('')}</ul>` : ''}
+      ${inlineAdd === 'biz' ? '<input class="add add-biz" placeholder="입력 후 Enter · 15:30 포장 → 알림" enterkeyhint="done">' : ''}
     </div>
-    <div class="sec">
-      <h3>할 일·일정 <small>${pd.txt}</small><button class="icon-btn" data-open="event" aria-label="기간 일정 추가" title="기간 일정 추가"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
-      <div class="prog"><b style="width:${pd.pct}%"></b></div>
+    <div class="sec" data-sec="daily">
+      <h3>할 일·일정 <small>${pd.txt}</small>${addBtn('daily', '할 일·일정 추가 (9/27~10/6 내용 → 기간 일정)')}</h3>
+      ${daily.length + rItems.length ? `<div class="prog"><b style="width:${pd.pct}%"></b></div>` : ''}
       ${evOn(k).length ? `<div class="evlist">${evOn(k).map(ev => { const c = catOf(ev).color; return `<div class="evchip${lum(c) > .5 ? ' dark' : ''}" data-evid="${ev.id}" title="눌러서 수정" style="background:${c}"><span>${esc(ev.t)}</span><small>${evRange(ev)}</small></div>`; }).join('')}</div>` : ''}
       ${rItems.length ? `<ul class="todos">${rItems.map(r => `<li class="todo${r.done ? ' done' : ''}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}">
           <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
           <span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span><i class="rdot" style="background:${catOf(r).color}" title="${freqLabel(r)}"></i></li>`).join('')}</ul>` : ''}
-      ${listHTML('daily', k, daily, rItems.length ? '' : '이 날 할 일이 없어요. 달력 날짜를 더블클릭하면 그 칸에서 바로 추가돼요.')}
+      ${listHTML('daily', k, daily)}
     </div>
-    <div class="sec">
-      <h3>이번 주 <small>${wk.w}주차 · ${mon.getMonth() + 1}.${mon.getDate()}–${sun.getMonth() + 1}.${sun.getDate()} ${pw.txt ? '· ' + pw.txt : ''}</small></h3>
-      <div class="prog"><b style="width:${pw.pct}%"></b></div>
-      ${listHTML('weekly', wk.key, weekly, '이번 주 목표를 적어보세요.')}
+    <div class="sec" data-sec="weekly">
+      <h3>이번 주 <small>${wk.w}주차 · ${mon.getMonth() + 1}.${mon.getDate()}–${sun.getMonth() + 1}.${sun.getDate()} ${pw.txt ? '· ' + pw.txt : ''}</small>${addBtn('weekly', '이번 주 업무·일정 추가')}</h3>
+      ${weekly.length ? `<div class="prog"><b style="width:${pw.pct}%"></b></div>` : ''}
+      ${listHTML('weekly', wk.key, weekly)}
     </div>
-    <div class="sec">
-      <h3>${d.getMonth() + 1}월 <small>${pm.txt}</small></h3>
-      <div class="prog"><b style="width:${pm.pct}%"></b></div>
-      ${listHTML('monthly', mk, monthly, '이번 달 목표를 적어보세요.')}
+    <div class="sec" data-sec="monthly">
+      <h3>${d.getMonth() + 1}월 <small>${pm.txt}</small>${addBtn('monthly', '이번 달 업무·일정 추가')}</h3>
+      ${monthly.length ? `<div class="prog"><b style="width:${pm.pct}%"></b></div>` : ''}
+      ${listHTML('monthly', mk, monthly)}
     </div>
     <div class="sec">
       <h3>알림 <small>${alarms.length ? '이 날 ' + alarms.length + '개' : ''}</small>
         <button class="icon-btn" data-open="alarm" aria-label="알림 추가·관리" title="알림 추가·관리 (삭제·켜고 끄기)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
       ${alarms.length ? `<ul class="todos">${alarms.map(a => `<li class="todo" style="cursor:pointer" title="눌러서 수정" data-kind="alarm" data-rid="${a.id}"><span class="time" style="color:${catOf(a).color}">${a.time}</span><span class="txt">${esc(a.t)}</span><small style="color:var(--ink-3);font-size:calc(11px*var(--fs))">${freqLabel(a)}</small><span class="acts"><button data-rdelx title="알림 삭제" aria-label="알림 삭제">✕</button></span></li>`).join('')}</ul>`
-        : '<div class="empty">이 날 울리는 알림이 없어요.</div>'}
+        : ''}
     </div>
     <div class="sec">
       <h3>반복 작업 <small>${routinesAll.length}개</small>
         <button class="icon-btn" data-open="routine" aria-label="반복 작업 추가·관리" title="반복 작업 추가·관리 (삭제)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
-      ${routinesAll.length ? [['매일 반복', x => x.freq === 'daily' || x.freq === 'weekdays'], ['매주 반복', x => x.freq === 'weekly'], ['매월 반복', x => x.freq === 'monthly']].map(([label, f]) => { const g = routinesAll.filter(f); return g.length ? `<div class="rgroup">${label} <span style="font-weight:500">${g.length}</span></div><ul class="todos">${g.map(r => `<li class="todo" style="cursor:pointer" title="눌러서 수정" data-kind="routine" data-rid="${r.id}"><span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span><small style="color:var(--ink-3);font-size:calc(11px*var(--fs))">${freqLabel(r)}</small><span class="acts"><button data-rdelx title="반복 작업 삭제" aria-label="반복 작업 삭제">✕</button></span></li>`).join('')}</ul>` : ''; }).join('')
-        : '<div class="empty">매일·매주 반복하는 일을 등록하면 달력에 자동으로 표시돼요.</div>'}
+      ${routinesAll.length ? [['매일 반복', x => x.freq === 'daily' || x.freq === 'weekdays'], ['주간 루틴', x => x.freq === 'weekly'], ['월간 루틴', x => x.freq === 'monthly']].map(([label, f]) => { const g = routinesAll.filter(f); return g.length ? `<div class="rgroup">${label} <span style="font-weight:500">${g.length}</span></div><ul class="todos">${g.map(r => `<li class="todo" style="cursor:pointer" title="눌러서 수정" data-kind="routine" data-rid="${r.id}"><span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span><small style="color:var(--ink-3);font-size:calc(11px*var(--fs))">${freqLabel(r)}</small><span class="acts"><button data-rdelx title="반복 작업 삭제" aria-label="반복 작업 삭제">✕</button></span></li>`).join('')}</ul>` : ''; }).join('')
+        : ''}
     </div>
     <div class="sscroll" aria-label="패널 스크롤"><button data-ss="-1" title="위로 (마우스를 올려두면 계속 올라가요)" aria-label="위로"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 10 4-4 4 4"/></svg></button><button data-ss="1" title="아래로 (마우스를 올려두면 계속 내려가요)" aria-label="아래로"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 6 4 4 4-4"/></svg></button></div>`;
   requestAnimationFrame(updateSideScroll);
@@ -1543,27 +1567,30 @@ $('#side').addEventListener('keydown', e => {
     return;
   }
   if (inp.classList.contains('add-biz')) {
-    if (e.key === 'Escape') { inp.value = ''; return releaseFocus(); }
+    if (e.key === 'Escape') return closeAdd();
     if (e.key === 'Enter' && !e.isComposing) {
-      const v = inp.value.trim(); if (!v) return releaseFocus();
-      state.routines.push({ id: uid(), t: v, freq: 'weekdays', days: [], dom: 1, start: key(sel) < todayK ? key(sel) : todayK, end: null, skipHol: true, panel: true, cat: defaultCat() });
-      save();
-      if (prefs.widget) releaseFocus(); else { const again = $('#side .add-biz'); if (again) again.focus(); }
+      const v = inp.value.trim(); if (!v) return closeAdd();
+      const m = v.match(/^(\d{1,2})\s*[:시.]\s*(\d{1,2})?\s*분?\s+(.+)$/) || v.match(/^(\d{1,2})(\d{2})\s+(.+)$/);
+      if (m && +m[1] <= 23 && +(m[2] || 0) <= 59) {
+        const time = `${pad(+m[1])}:${pad(+(m[2] || 0))}`;
+        state.alarms.push({ id: uid(), t: m[3].trim(), time, freq: 'weekdays', days: [], dom: 1, start: todayK, end: null, hol: 'skip', panel: true, on: true, cat: defaultCat() });
+        toast(`평일 ${time} 알림을 추가했어요`);
+      } else {
+        state.routines.push({ id: uid(), t: v, freq: 'weekdays', days: [], dom: 1, start: key(sel) < todayK ? key(sel) : todayK, end: null, skipHol: true, panel: true, cat: defaultCat() });
+      }
+      save(); openAdd('biz');
     }
     return;
   }
   if (inp.classList.contains('add')) {
-    if (e.key === 'Escape') { inp.value = ''; return releaseFocus(); }
+    if (e.key === 'Escape') return closeAdd();
     if (e.key === 'Enter' && !e.isComposing) {
-      const v = inp.value.trim(); if (!v) return releaseFocus();
+      const v = inp.value.trim(); if (!v) return closeAdd();
       const scope = inp.dataset.scope;
       const qev = parseQuickEvent(v);
-      if (qev) { state.events.push(qev); save(); toast(`${evRange(qev)} 기간 일정을 추가했어요`); if (prefs.widget) releaseFocus(); return; }
+      if (qev) { state.events.push(qev); save(); toast(`${evRange(qev)} 기간 일정을 추가했어요`); return openAdd(scope); }
       bucketOf(scope, inp.dataset.b).push({ id: uid(), t: v, done: false, cat: defaultCat() });
-      save();
-      // 바탕화면 모드에서는 입력칸에서 빠져나와 마우스 포인터가 다시 보이게
-      if (prefs.widget) releaseFocus();
-      else { const again = $(`#side .add[data-scope="${scope}"]`); if (again) again.focus(); }
+      save(); openAdd(scope);
     }
   }
 });
@@ -2128,6 +2155,23 @@ $('#grid').addEventListener('dblclick', e => { if (e.target.closest('.ev-bar')) 
   }
   save();
 }, true));
+
+/* + 버튼 · 섹션 더블클릭 → 입력칸 */
+$('#side').addEventListener('click', e => { const b = e.target.closest('[data-addsec]'); if (b) { e.stopPropagation(); inlineAdd === b.dataset.addsec ? closeAdd() : openAdd(b.dataset.addsec); } });
+$('#side').addEventListener('dblclick', e => {
+  const sec = e.target.closest('[data-sec]'); if (!sec) return;
+  if (e.target.closest('li, input, textarea, button, .evchip, .evlist')) return;
+  openAdd(sec.dataset.sec);
+});
+document.addEventListener('pointerdown', e => {   // 빈 입력칸 밖을 누르면 닫기
+  if (!inlineAdd || e.target.closest('#side .add, [data-addsec]')) return;
+  const inp = $('#side .add'); if (inp && inp.value.trim()) return;
+  inlineAdd = null; setTimeout(() => renderSide(), 0);
+}, true);
+$('#side').addEventListener('focusout', e => {
+  const t = e.target; if (!t.classList || !t.classList.contains('add')) return;
+  setTimeout(() => { if (t.isConnected && !t.value.trim() && document.activeElement !== t) closeAdd(); }, 120);
+});
 
 /* 근무일 반복: 글자 눌러 바로 수정, 설정, 삭제 */
 $('#side').addEventListener('click', e => {
