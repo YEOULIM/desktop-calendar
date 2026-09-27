@@ -1956,8 +1956,17 @@ $('#dImport').onchange = e => {
 
 /* ======================== 동기화 (Firebase) ======================== */
 const FB_VER = '10.12.2';
+// 여늘 캘린더 전용 Firebase 연결 정보 (공개돼도 괜찮은 앱 주소 정보, 데이터는 로그인·보안 규칙으로 보호)
+const FB_BUILTIN = {
+  apiKey: 'AIzaSyBuJ6bAAnqJVQUwCm3Pe8RDriI6JZx_mkA',
+  authDomain: 'desktop-calendar-582a5.firebaseapp.com',
+  projectId: 'desktop-calendar-582a5',
+  storageBucket: 'desktop-calendar-582a5.firebasestorage.app',
+  messagingSenderId: '462959926606',
+  appId: '1:462959926606:web:90b38b6375ead01db5921f'
+};
 const Sync = {
-  cfg: store.get('ync-fb', null), user: null, ref: null, unsub: null, timer: null, ready: false,
+  cfg: store.get('ync-fb', null) || FB_BUILTIN, user: null, ref: null, unsub: null, timer: null, ready: false,
   status(s, text) { const el = $('#sync'); el.dataset.s = s; el.querySelector('span').textContent = text; },
   loadScript: src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }),
   async init() {
@@ -1999,6 +2008,7 @@ const Sync = {
     $('#syncSetup').classList.toggle('hidden', has); $('#syncConfigured').classList.toggle('hidden', !has);
     if (!has) return;
     $('#syncProj').textContent = this.cfg.projectId || '';
+    $('#syncReset').classList.toggle('hidden', this.cfg === FB_BUILTIN);
     $('#syncLoggedOut').classList.toggle('hidden', !!this.user); $('#syncLoggedIn').classList.toggle('hidden', !this.user);
     if (this.user) $('#syUser').textContent = this.user.email;
   },
@@ -2568,6 +2578,13 @@ dragger($('#grip'), (ev, r) => {
   applyGrid();
   document.body.style.setProperty('--ww', prefs.ww + 'px'); document.body.style.setProperty('--wh', prefs.wh + 'px');
 }, '마우스를 움직여 크기를 맞춘 뒤 한 번 더 클릭하세요 (Esc로 끝내기)');
+
+$('#sync').style.cursor = 'pointer';
+$('#sync').title = '눌러서 로그인·동기화 설정';
+$('#sync').addEventListener('click', () => {
+  fillSettings(); $('#dlgSettings').showModal();
+  $('#setTabs [data-t="sync"]').click();
+});
 
 /* ======================== 시작 ======================== */
 if (!state.evMoved) {
