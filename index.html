@@ -490,12 +490,12 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
   .cell .hol{display:none}
   .cell .hol.haskr{display:block;margin-top:3px;background:var(--kr);color:#fff;border-radius:4px;padding:1px 3px;font-size:8.5px;line-height:1.75;letter-spacing:-.02em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:clip}
   .cell .hol.haskr .kr{color:#fff}
-  .cell .pill{margin-top:3px;border-radius:4px;padding:1px 3px;font-size:8.5px;line-height:1.75;letter-spacing:-.02em;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip}
+  .cell .pill{border:0;margin-top:3px;border-radius:4px;padding:1px 3px;font-size:8.5px;line-height:1.75;letter-spacing:-.02em;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip}
   .cell .pill.dark{color:#1d2230}
   .cell .pill.done{opacity:.45;text-decoration:line-through}
   .cell .d{font-size:calc(13px*var(--fs-d))}
-  .dots{display:flex}
-  .grid{--barh:15px;--evtop:calc(8px + 22px*var(--fs-d) + 13px)} .ev-bar{font-size:8.5px;letter-spacing:-.02em;padding:0 3px;margin:0 1px;border-radius:4px}
+  .dots{display:none}   /* 폰: 점 표시 없이 막대만 */
+  .grid{--barh:16.875px;--evtop:calc(8px + 22px*var(--fs-d) + 13px)} .ev-bar{font-size:8.5px;letter-spacing:-.02em;padding:0 3px;margin:0 1px;border-radius:4px}
   .side{overflow:visible}
   .cal,body.side-left .cal{order:1} .side,body.side-left .side{order:3} #splitter,#grip,body.widget #grip{display:none}
   .todo .acts{position:static;opacity:1;pointer-events:auto;box-shadow:none;background:transparent}
@@ -2768,7 +2768,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790518982';
+const APP_BUILD = '1790519323';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
