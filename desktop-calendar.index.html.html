@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="여늘 캘린더">
+<title>여늘 데스크 캘린더</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --ink:#1d2230; --ink-2:#5b6275; --ink-3:#9aa0b0;
+  --glass-rgb:255 255 255; --glass-a:.74;
+  --line:rgba(29,34,48,.08); --line-2:rgba(29,34,48,.14);
+  --kr:#d43a5c; --cn:#b8740c; --sat:#3566d4;
+  --accent:#2b7a6f; --accent-soft:rgba(43,122,111,.11); --on-accent:#fff;
+  --field:rgba(255,255,255,.7);
+  --shadow:0 18px 50px -24px rgba(20,32,54,.45);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --ink:#eceef4; --ink-2:#aab0c0; --ink-3:#6f7689;
+  --glass-rgb:22 25 34; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.14);
+  --kr:#ff7690; --cn:#e6a53c; --sat:#7fa4ff; --accent:#5cc2b2; --accent-soft:rgba(92,194,178,.14); --on-accent:#0f1a18;
+  --field:rgba(255,255,255,.06); color-scheme:dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#eceef4; --ink-2:#aab0c0; --ink-3:#6f7689;
+    --glass-rgb:22 25 34; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.14);
+    --kr:#ff7690; --cn:#e6a53c; --sat:#7fa4ff; --accent:#5cc2b2; --accent-soft:rgba(92,194,178,.14); --on-accent:#0f1a18;
+    --field:rgba(255,255,255,.06); color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Pretendard Variable",Pretendard,system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color:var(--ink); font-size:14px; line-height:1.45;
+  background:#dfe9ec; background-size:cover; background-position:center; background-attachment:fixed;
+  -webkit-font-smoothing:antialiased; font-feature-settings:"tnum";
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* ---------- layout ---------- */
+#app{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;height:100%;padding:16px}
+body.widget{overflow:hidden}
+body.widget #app{position:fixed;padding:0;left:var(--wx);top:var(--wy);width:var(--ww);height:var(--wh)}
+.panel{
+  background:rgb(var(--glass-rgb) / var(--glass-a));
+  -webkit-backdrop-filter:blur(20px) saturate(1.25); backdrop-filter:blur(20px) saturate(1.25);
+  border:1px solid rgb(255 255 255 / .35); border-radius:22px; box-shadow:var(--shadow); min-height:0;
+}
+
+/* ---------- calendar ---------- */
+.cal{display:flex;flex-direction:column;overflow:hidden}
+.cal-head{display:flex;align-items:center;gap:14px;padding:14px 18px 10px}
+.title{display:flex;align-items:center;gap:8px;min-width:0}
+.title .num{font-size:52px;font-weight:200;letter-spacing:-.05em;line-height:.9}
+.title .meta{display:flex;flex-direction:column;line-height:1.15}
+.title .meta b{font-size:16px;font-weight:700}
+.title .meta span{font-size:12px;color:var(--ink-2)}
+.nav{display:flex;align-items:center;gap:4px}
+.icon-btn{border:0;background:transparent;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2)}
+.icon-btn:hover{background:var(--accent-soft);color:var(--ink)}
+.pill{border:1px solid var(--line-2);background:transparent;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:600}
+.pill:hover{background:var(--accent-soft)}
+.spacer{flex:1}
+.toggle{border:1px solid var(--line-2);background:transparent;border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700;color:var(--ink-3)}
+.toggle[aria-pressed="true"].kr{color:var(--kr);border-color:currentColor}
+.toggle[aria-pressed="true"].cn{color:var(--cn);border-color:currentColor}
+.sync{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-2);white-space:nowrap}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.sync[data-s="synced"] i{background:#2fb37a}
+.sync[data-s="busy"] i{background:var(--cn)}
+.sync[data-s="error"] i{background:var(--kr)}
+
+.dow{display:grid;grid-template-columns:30px repeat(7,1fr);padding:0 10px;font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.dow div{padding:4px 7px}
+.dow .sun{color:var(--kr)} .dow .sat{color:var(--sat)}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:30px repeat(7,minmax(0,1fr));padding:0 10px 10px}
+.wk{font-size:10.5px;color:var(--ink-3);padding:8px 0 0 4px;border-top:1px solid var(--line)}
+.cell{position:relative;border-top:1px solid var(--line);padding:6px 7px 4px;overflow:hidden;cursor:pointer;border-radius:0;display:flex;flex-direction:column;gap:1px;min-height:0}
+.cell:hover{background:rgb(var(--glass-rgb) / .35)}
+.cell.sel{background:var(--accent-soft);border-radius:10px}
+.cell.out{opacity:.38}
+.cell .top{display:flex;align-items:baseline;gap:5px}
+.cell .d{font-size:13.5px;font-weight:650;min-width:22px;height:22px;display:inline-grid;place-items:center;border-radius:50%;margin:-2px 0 0 -3px}
+.cell.sun .d,.cell.kr-off .d{color:var(--kr)}
+.cell.sat:not(.kr-off) .d{color:var(--sat)}
+.cell.today .d{background:var(--accent);color:var(--on-accent)}
+.cell .lunar{font-size:10.5px;color:var(--ink-3)}
+.cell .lunar.first{color:var(--ink-2);font-weight:600}
+.badge-work{margin-left:auto;font-size:10px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:4px;padding:0 3px;line-height:1.4}
+.cell.cn-off::after{content:"";position:absolute;left:7px;right:7px;bottom:0;height:2px;border-radius:2px;background:var(--cn);opacity:.55}
+.hol{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hol.kr{color:var(--kr)} .hol.cn{color:var(--cn)}
+.it{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;color:var(--ink)}
+.it .dot{width:6px;height:6px;border-radius:50%;flex:none;background:var(--ink-3)}
+.it.done{color:var(--ink-3);text-decoration:line-through}
+.it.routine .dot{border-radius:2px}
+.more{font-size:10.5px;color:var(--ink-3)}
+.dots{display:none;gap:3px;flex-wrap:wrap;margin-top:2px}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--ink-3)}
+
+/* ---------- side ---------- */
+.side{overflow:auto;padding:16px 16px 20px;display:flex;flex-direction:column;gap:18px}
+.day-title{display:flex;align-items:baseline;gap:8px}
+.day-title h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
+.day-title span{font-size:12px;color:var(--ink-2)}
+.day-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:11.5px;font-weight:600;border-radius:6px;padding:1px 7px;background:var(--field)}
+.tag.kr{color:var(--kr)} .tag.cn{color:var(--cn)} .tag.work{color:var(--ink-2)}
+.sec h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:13px;font-weight:700}
+.sec h3 small{font-weight:500;color:var(--ink-3);font-size:11.5px}
+.sec h3 .icon-btn{margin-left:auto;width:26px;height:26px}
+.prog{height:3px;border-radius:3px;background:var(--line);overflow:hidden;margin:-2px 0 8px}
+.prog b{display:block;height:100%;background:var(--accent);transition:width .25s}
+ul.todos{list-style:none;margin:0;padding:0}
+.todo{display:flex;align-items:flex-start;gap:8px;padding:5px 2px;border-radius:8px}
+.todo:hover{background:rgb(var(--glass-rgb) / .5)}
+.chk{flex:none;width:17px;height:17px;margin-top:1px;border-radius:6px;border:1.5px solid var(--ink-3);background:transparent;display:grid;place-items:center;padding:0}
+.chk svg{opacity:0;width:11px;height:11px}
+.todo.done .chk{background:var(--accent);border-color:var(--accent)}
+.todo.done .chk svg{opacity:1}
+.todo .txt{flex:1;min-width:0;word-break:break-all;cursor:text}
+.todo.done .txt{color:var(--ink-3);text-decoration:line-through}
+.todo .acts{display:flex;gap:2px;opacity:0}
+.todo:hover .acts,.todo:focus-within .acts{opacity:1}
+.todo .acts button{border:0;background:transparent;color:var(--ink-3);width:22px;height:22px;border-radius:6px;font-size:13px;line-height:1}
+.todo .acts button:hover{color:var(--ink);background:var(--accent-soft)}
+.todo .edit{flex:1;border:0;border-bottom:1px solid var(--accent);background:transparent;padding:0;outline:none}
+.rdot{flex:none;width:8px;height:8px;border-radius:2px;margin-top:6px}
+.add{width:100%;border:0;border-bottom:1px dashed var(--line-2);background:transparent;padding:6px 2px;font-size:13px;outline:none}
+.add::placeholder{color:var(--ink-3)}
+.add:focus{border-bottom-color:var(--accent);border-bottom-style:solid}
+.empty{font-size:12px;color:var(--ink-3);padding:2px}
+
+/* ---------- dialogs ---------- */
+dialog{border:0;padding:0;border-radius:20px;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 40px);background:rgb(var(--glass-rgb) / .96);color:var(--ink);box-shadow:0 30px 80px -20px rgba(0,0,0,.45)}
+dialog::backdrop{background:rgba(15,20,30,.35);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.dlg{display:flex;flex-direction:column;max-height:calc(100vh - 40px)}
+.dlg-head{display:flex;align-items:center;padding:16px 18px 8px}
+.dlg-head h2{margin:0;font-size:17px}
+.dlg-body{overflow:auto;padding:4px 18px 18px}
+.tabs{display:flex;gap:4px;padding:0 18px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{border:0;background:transparent;padding:6px 10px;border-radius:8px;font-weight:600;font-size:13px;color:var(--ink-2)}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--ink)}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.row label{flex:1;min-width:140px;font-size:13px}
+.row label small{display:block;color:var(--ink-3);font-size:11.5px}
+.field{border:1px solid var(--line-2);background:var(--field);border-radius:8px;padding:6px 9px;min-width:0}
+input.field[type=number]{width:90px}
+textarea.field{width:100%;min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.btn{border:0;border-radius:9px;padding:7px 14px;font-weight:600;background:var(--accent);color:var(--on-accent)}
+.btn.ghost{background:transparent;border:1px solid var(--line-2);color:var(--ink)}
+.btn.danger{background:transparent;border:1px solid var(--kr);color:var(--kr)}
+.note{font-size:12px;color:var(--ink-2);line-height:1.6}
+.note ol{padding-left:18px;margin:6px 0}
+pre.code{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:11.5px;overflow:auto;white-space:pre}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line-2);background:transparent;border-radius:8px;min-width:32px;padding:4px 6px;font-size:12.5px}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.sw{width:22px;height:22px;border-radius:7px;border:2px solid transparent;padding:0}
+.sw[aria-pressed="true"]{border-color:var(--ink)}
+.rlist{list-style:none;margin:0 0 10px;padding:0}
+.rlist li{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.rlist li span{flex:1}
+.rlist li small{color:var(--ink-3)}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:rgb(var(--glass-rgb));padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+.toast.on{opacity:1}
+
+/* ---------- mobile ---------- */
+@media (max-width:760px){
+  #app,body.widget #app{position:static;display:flex;flex-direction:column;height:auto;min-height:100%;width:auto;padding:10px;gap:10px}
+  .cal{height:auto}
+  .cal-head{flex-wrap:wrap;gap:8px;padding:12px 12px 6px}
+  .title .num{font-size:40px}
+  .grid{grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(58px,auto);padding:0 6px 8px}
+  .dow{grid-template-columns:repeat(7,1fr);padding:0 6px}
+  .dow .wkh,.wk{display:none}
+  .cell{padding:5px 4px}
+  .cell .top{flex-direction:column;align-items:flex-start;gap:0}
+  .cell .lunar{font-size:9.5px;line-height:1.2}
+  .badge-work{position:absolute;top:4px;right:3px;font-size:9px}
+  .cell .it,.cell .more,.cell .hol.cn{display:none}
+  .cell .hol{font-size:9.5px}
+  .dots{display:flex}
+  .side{overflow:visible}
+  .todo .acts{opacity:1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="panel cal" aria-label="월간 캘린더">
+    <header class="cal-head">
+      <div class="title">
+        <div class="num" id="mNum">9</div>
+        <div class="meta"><b id="mName">9월</b><span id="mYear">2026</span></div>
+      </div>
+      <div class="nav">
+        <button class="icon-btn" id="prev" aria-label="이전 달"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3 5 8l5 5"/></svg></button>
+        <button class="pill" id="todayBtn">오늘</button>
+        <button class="icon-btn" id="next" aria-label="다음 달"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 3 5 5-5 5"/></svg></button>
+      </div>
+      <div class="spacer"></div>
+      <button class="toggle kr" id="tgKR" title="한국 공휴일 표시">한</button>
+      <button class="toggle cn" id="tgCN" title="중국 공휴일 표시">中</button>
+      <div class="sync" id="sync" data-s="local"><i></i><span>이 기기에 저장</span></div>
+      <button class="icon-btn" id="openSettings" aria-label="설정"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </header>
+    <div class="dow" id="dow"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <aside class="panel side" id="side" aria-label="할 일"></aside>
+</div>
+
+<!-- 반복 작업 관리 -->
+<dialog id="dlgRoutine">
+  <div class="dlg">
+    <div class="dlg-head"><h2>반복 작업</h2><div class="spacer"></div><button class="icon-btn" data-close aria-label="닫기">✕</button></div>
+    <div class="dlg-body">
+      <ul class="rlist" id="rList"></ul>
+      <div class="row"><label>작업 이름</label><input class="field" id="rTitle" placeholder="예: 에이블리 주문 확인" style="flex:2"></div>
+      <div class="row"><label>반복 주기</label>
+        <div class="chips" id="rFreq">
+          <button data-v="daily" aria-pressed="true">매일</button>
+          <button data-v="weekdays" aria-pressed="false">평일</button>
+          <button data-v="weekly" aria-pressed="false">매주</button>
+          <button data-v="monthly" aria-pressed="false">매월</button>
+        </div>
+      </div>
+      <div class="row hidden" id="rDaysRow"><label>요일</label><div class="chips" id="rDays"></div></div>
+      <div class="row hidden" id="rDomRow"><label>날짜<small>그 달에 없는 날짜면 말일로 표시돼요</small></label><input class="field" type="number" id="rDom" min="1" max="31" value="1"></div>
+      <div class="row"><label>시작일</label><input class="field" type="date" id="rStart"></div>
+      <div class="row"><label>한국 공휴일에는 건너뛰기</label><input type="checkbox" id="rSkip"></div>
+      <div class="row"><label>색상</label><div class="chips" id="rColors"></div></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="rAdd">반복 작업 추가</button></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- 설정 -->
+<dialog id="dlgSettings">
+  <div class="dlg">
+    <div class="dlg-head"><h2>설정</h2><div class="spacer"></div><button class="icon-btn" data-close aria-label="닫기">✕</button></div>
+    <div class="tabs" role="tablist" id="setTabs">
+      <button role="tab" data-t="view" aria-selected="true">화면</button>
+      <button role="tab" data-t="widget" aria-selected="false">바탕화면 모드</button>
+      <button role="tab" data-t="hol" aria-selected="false">공휴일</button>
+      <button role="tab" data-t="sync" aria-selected="false">동기화</button>
+      <button role="tab" data-t="data" aria-selected="false">백업</button>
+    </div>
+    <div class="dlg-body">
+      <div data-p="view">
+        <div class="row"><label>주 시작 요일</label><div class="chips" id="sWeek"><button data-v="0">일요일</button><button data-v="1">월요일</button></div></div>
+        <div class="row"><label>테마</label><div class="chips" id="sTheme"><button data-v="auto">시스템</button><button data-v="light">밝게</button><button data-v="dark">어둡게</button></div></div>
+        <div class="row"><label>음력 날짜 표시</label><input type="checkbox" id="sLunar"></div>
+        <div class="row"><label>패널 불투명도<small>배경이 비치는 정도</small></label><input type="range" id="sGlass" min="0.35" max="0.98" step="0.01"></div>
+        <div class="row"><label>배경</label><div class="chips" id="sWall"></div></div>
+        <div class="row"><label>배경 이미지<small>이 기기에만 저장돼요</small></label><input type="file" id="sWallImg" accept="image/*"><button class="btn ghost" id="sWallClear">이미지 지우기</button></div>
+      </div>
+      <div data-p="widget" class="hidden">
+        <p class="note">바탕화면에 띄울 때 캘린더가 놓일 위치와 크기예요. 이 설정은 기기마다 따로 저장되니 폰에는 영향이 없어요.</p>
+        <div class="row"><label>바탕화면 모드 켜기</label><input type="checkbox" id="sWidget"></div>
+        <div class="row"><label>너비 (px)</label><input class="field" type="number" id="sW" min="600" step="10"></div>
+        <div class="row"><label>높이 (px)</label><input class="field" type="number" id="sH" min="400" step="10"></div>
+        <div class="row"><label>왼쪽에서 (px)</label><input class="field" type="number" id="sX" min="0" step="10"></div>
+        <div class="row"><label>위에서 (px)</label><input class="field" type="number" id="sY" min="0" step="10"></div>
+        <div class="row"><label>할 일 패널 너비 (px)</label><input class="field" type="number" id="sSide" min="220" max="480" step="10"></div>
+        <p class="note">현재 화면 크기: <b id="scrSize"></b></p>
+      </div>
+      <div data-p="hol" class="hidden">
+        <div class="row"><label>한국 공휴일<small>대체공휴일 자동 계산</small></label><input type="checkbox" id="sKR"></div>
+        <div class="row"><label>중국 공휴일 (放假)</label><input type="checkbox" id="sCN"></div>
+        <div class="row"><label>중국 조정 출근일 (班)<small>주말인데 출근하는 날</small></label><input type="checkbox" id="sCNW"></div>
+        <p class="note">중국 일정은 매년 11월쯤 국무원 발표 후 자동으로 받아와요(인터넷 연결 필요). 2026년은 파일에 내장돼 있어요. 한국 임시공휴일처럼 새로 생긴 휴일은 아래에 직접 추가하세요.</p>
+        <ul class="rlist" id="chList"></ul>
+        <div class="row"><input class="field" type="date" id="chDate"><input class="field" id="chName" placeholder="휴일 이름" style="flex:1"><button class="btn" id="chAdd">휴일 추가</button></div>
+      </div>
+      <div data-p="sync" class="hidden">
+        <div id="syncConfigured" class="hidden">
+          <div class="row"><label>연결된 프로젝트<small id="syncProj"></small></label><button class="btn danger" id="syncReset">연결 해제</button></div>
+          <div id="syncLoggedOut">
+            <div class="row"><label>이메일</label><input class="field" type="email" id="syEmail" autocomplete="username" style="flex:2"></div>
+            <div class="row"><label>비밀번호</label><input class="field" type="password" id="syPw" autocomplete="current-password" style="flex:2"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="sySignup">계정 만들기</button><button class="btn" id="syLogin">로그인</button></div>
+          </div>
+          <div id="syncLoggedIn" class="hidden">
+            <div class="row"><label>로그인됨<small id="syUser"></small></label><button class="btn ghost" id="syLogout">로그아웃</button></div>
+          </div>
+          <p class="note" id="syMsg"></p>
+        </div>
+        <div id="syncSetup">
+          <div class="note">
+            <ol>
+              <li>console.firebase.google.com 에서 프로젝트를 만들어요.</li>
+              <li>Build → Authentication → 로그인 방법에서 <b>이메일/비밀번호</b>를 사용 설정해요.</li>
+              <li>Build → Firestore Database → 데이터베이스 만들기 (위치: asia-northeast3 서울).</li>
+              <li>Firestore → 규칙 탭에 아래 규칙을 붙여넣고 게시해요.</li>
+              <li>프로젝트 설정 → 내 앱 → 웹 앱(&lt;/&gt;) 추가 → 나오는 <b>firebaseConfig</b> 내용을 아래 칸에 통째로 붙여넣어요.</li>
+            </ol>
+          </div>
+<pre class="code">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{doc=**} {
+      allow read, write: if request.auth != null
+                         &amp;&amp; request.auth.uid == uid;
+    }
+  }
+}</pre>
+          <textarea class="field" id="syCfg" placeholder="const firebaseConfig = { apiKey: &quot;...&quot;, authDomain: &quot;...&quot;, projectId: &quot;...&quot;, ... };"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn" id="sySave">연결하기</button></div>
+          <p class="note">PC와 폰에서 각각 한 번씩 같은 설정을 붙여넣고 같은 계정으로 로그인하면 돼요.</p>
+        </div>
+      </div>
+      <div data-p="data" class="hidden">
+        <p class="note">할 일·반복 작업·직접 추가한 휴일을 파일로 내보내거나 불러와요. 불러오면 지금 내용이 파일 내용으로 바뀌어요.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dExport">백업 파일 내보내기</button><label class="btn ghost" style="display:inline-flex;align-items:center">백업 파일 불러오기<input type="file" id="dImport" accept="application/json" class="hidden"></label></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ======================== 기본 유틸 ======================== */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function isoWeek(d) {
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + 3);           // 그 주의 목요일
+  const y = t.getFullYear(), jan4 = new Date(y, 0, 4);
+  const w = 1 + Math.round(((t - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  return { y, w, key: `${y}-W${pad(w)}` };
+}
+const monday = d => addDays(d, -((d.getDay() + 6) % 7));
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2200); }
+const store = {
+  get(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch { return def; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+
+/* ======================== 음력 ======================== */
+const lunarFmt = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' });
+const lunarCache = new Map();
+function lunar(d) {
+  const k = key(d);
+  if (lunarCache.has(k)) return lunarCache.get(k);
+  let r = null;
+  try {
+    const p = lunarFmt.formatToParts(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12)));
+    const mv = p.find(x => x.type === 'month').value, dv = p.find(x => x.type === 'day').value;
+    const ry = p.find(x => x.type === 'relatedYear' || x.type === 'year');
+    r = { y: ry ? parseInt(ry.value) : d.getFullYear(), m: parseInt(mv.replace(/\D/g, '')), d: parseInt(dv), leap: /\D/.test(mv) };
+  } catch {}
+  lunarCache.set(k, r);
+  return r;
+}
+function findLunar(year, m, dd) {
+  for (let d = new Date(year, 0, 1); d.getFullYear() === year; d = addDays(d, 1)) {
+    const l = lunar(d);
+    if (l && l.y === year && l.m === m && l.d === dd && !l.leap) return d;
+  }
+  return null;
+}
+
+/* ======================== 한국 공휴일 (대체공휴일 자동 계산) ======================== */
+// A: 설·추석 — 일요일/다른 공휴일과 겹치면 대체, B: 국경일 등 — 토·일/겹치면 대체, N: 대체 없음
+const KR_ELECTIONS = { '2026-06-03': '지방선거', '2028-04-12': '국회의원 선거' };
+const krCache = {};
+function krHolidays(year) {
+  if (krCache[year]) return krCache[year];
+  const E = [];
+  const fx = (md, name, g) => E.push({ days: [new Date(year, +md.slice(0, 2) - 1, +md.slice(3))], names: [name], g });
+  fx('01-01', '신정', 'N'); fx('03-01', '삼일절', 'B'); fx('05-01', '노동절', 'B'); fx('05-05', '어린이날', 'B');
+  fx('06-06', '현충일', 'N'); fx('07-17', '제헌절', 'B'); fx('08-15', '광복절', 'B'); fx('10-03', '개천절', 'B');
+  fx('10-09', '한글날', 'B'); fx('12-25', '성탄절', 'B');
+  const seol = findLunar(year, 1, 1), bud = findLunar(year, 4, 8), chu = findLunar(year, 8, 15);
+  if (seol) E.push({ days: [addDays(seol, -1), seol, addDays(seol, 1)], names: ['설날 연휴', '설날', '설날 연휴'], g: 'A' });
+  if (bud) E.push({ days: [bud], names: ['부처님오신날'], g: 'B' });
+  if (chu) E.push({ days: [addDays(chu, -1), chu, addDays(chu, 1)], names: ['추석 연휴', '추석', '추석 연휴'], g: 'A' });
+  for (const [k, n] of Object.entries(KR_ELECTIONS)) if (k.startsWith(year + '-')) E.push({ days: [parse(k)], names: [n], g: 'N' });
+  E.sort((a, b) => a.days[0] - b.days[0]);
+  const map = {}, need = [];
+  for (const e of E) {
+    let n = 0;
+    e.days.forEach((d, i) => {
+      const k = key(d), w = d.getDay();
+      if (map[k]) n++;
+      else if (e.g === 'A' && w === 0) n++;
+      else if (e.g === 'B' && (w === 0 || w === 6)) n++;
+      (map[k] = map[k] || []).push(e.names[i]);
+    });
+    if (n) need.push({ last: e.days[e.days.length - 1], n });
+  }
+  for (const x of need) {
+    let d = addDays(x.last, 1), n = x.n;
+    while (n > 0) {
+      const k = key(d), w = d.getDay();
+      if (w !== 0 && w !== 6 && !map[k]) { map[k] = ['대체공휴일']; n--; }
+      d = addDays(d, 1);
+    }
+  }
+  return (krCache[year] = map);
+}
+
+/* ======================== 중국 공휴일 ======================== */
+// 2026: 국무원판공청 발표(2025.11.4). 다른 해는 holiday-cn 데이터를 받아와 저장
+const CN_BUILTIN = {
+  2026: {
+    off: [['元旦', '2026-01-01', 3], ['春节', '2026-02-15', 9], ['清明节', '2026-04-04', 3], ['劳动节', '2026-05-01', 5], ['端午节', '2026-06-19', 3], ['中秋节', '2026-09-25', 3], ['国庆节', '2026-10-01', 7]],
+    work: [['元旦', '2026-01-04'], ['春节', '2026-02-14'], ['春节', '2026-02-28'], ['劳动节', '2026-05-09'], ['国庆节', '2026-09-20'], ['国庆节', '2026-10-10']]
+  }
+};
+const cnMaps = {}, cnLoading = {};
+function buildCNFromBuiltin(b) {
+  const m = {};
+  b.off.forEach(([n, s, len]) => { for (let i = 0; i < len; i++) m[key(addDays(parse(s), i))] = { name: n, off: true, first: i === 0 }; });
+  b.work.forEach(([n, s]) => m[s] = { name: n, off: false });
+  return m;
+}
+function buildCNFromList(days) {
+  const m = {}; let prevName = '', prevDate = null;
+  days.slice().sort((a, b) => a.date < b.date ? -1 : 1).forEach(x => {
+    const first = x.isOffDay && !(prevName === x.name && prevDate && key(addDays(parse(prevDate), 1)) === x.date);
+    m[x.date] = { name: x.name, off: !!x.isOffDay, first };
+    if (x.isOffDay) { prevName = x.name; prevDate = x.date; }
+  });
+  return m;
+}
+function cnHolidays(year) {
+  if (cnMaps[year]) return cnMaps[year];
+  if (CN_BUILTIN[year]) return (cnMaps[year] = buildCNFromBuiltin(CN_BUILTIN[year]));
+  const cached = store.get('ync-cn-' + year, null);
+  if (cached && cached.days) {
+    cnMaps[year] = buildCNFromList(cached.days);
+    if (Date.now() - cached.at > 7 * 864e5) fetchCN(year);
+    return cnMaps[year];
+  }
+  fetchCN(year);
+  return {};
+}
+function fetchCN(year) {
+  if (cnLoading[year]) return; cnLoading[year] = true;
+  fetch(`https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(j => { if (j && Array.isArray(j.days) && j.days.length) { store.set('ync-cn-' + year, { at: Date.now(), days: j.days }); cnMaps[year] = buildCNFromList(j.days); render(); } })
+    .catch(() => {})
+    .finally(() => { cnLoading[year] = false; });
+}
+
+/* ======================== 상태 ======================== */
+const DEF_STATE = { v: 1, updatedAt: 0, daily: {}, weekly: {}, monthly: {}, routines: [], rdone: {}, customHol: [] };
+const DEF_PREFS = { weekStart: 0, theme: 'auto', lunar: true, kr: true, cn: true, cnWork: true, glass: 0.74, wall: 'mist',
+  widget: false, ww: 1180, wh: 700, wx: 60, wy: 60, side: 300 };
+const WALLS = {
+  mist: 'linear-gradient(140deg,#cfe6e0 0%,#e4ebf5 50%,#f1e2ea 100%)',
+  dusk: 'linear-gradient(160deg,#2b3350 0%,#4b3f63 55%,#8a5a6e 100%)',
+  sage: 'linear-gradient(135deg,#b9cdb9 0%,#dfe6d3 60%,#f0ede2 100%)',
+  sky:  'linear-gradient(180deg,#9fc4e8 0%,#d6e6f4 60%,#f5f7fb 100%)',
+  ink:  'linear-gradient(160deg,#14171f 0%,#232838 100%)'
+};
+const COLORS = ['#2b7a6f', '#d43a5c', '#3566d4', '#b8740c', '#8a55c9'];
+const normalize = s => Object.assign(structuredClone(DEF_STATE), s || {});
+let state = normalize(store.get('ync-data', null));
+let prefs = Object.assign({}, DEF_PREFS, store.get('ync-prefs', {}));
+let view = new Date(); view.setDate(1);
+let sel = new Date();
+let todayK = key(new Date());
+
+function save() {
+  state.updatedAt = Date.now();
+  store.set('ync-data', state);
+  Sync.push();
+  render();
+}
+const savePrefs = () => { store.set('ync-prefs', prefs); applyPrefs(); render(); };
+
+/* ======================== 반복 작업 ======================== */
+function routineOn(r, d) {
+  const k = key(d);
+  if (r.start && k < r.start) return false;
+  if (r.skipHol && krOff(d)) return false;
+  const w = d.getDay();
+  switch (r.freq) {
+    case 'daily': return true;
+    case 'weekdays': return w >= 1 && w <= 5;
+    case 'weekly': return (r.days || []).includes(w);
+    case 'monthly': {
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      return d.getDate() === Math.min(r.dom || 1, last);
+    }
+  }
+  return false;
+}
+function krOff(d) {
+  const k = key(d);
+  return !!(krHolidays(d.getFullYear())[k] || state.customHol.some(h => h.date === k));
+}
+const freqLabel = r => r.freq === 'daily' ? '매일' : r.freq === 'weekdays' ? '평일' :
+  r.freq === 'weekly' ? '매주 ' + (r.days || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(i => DOW[i]).join('·') : `매월 ${r.dom}일`;
+
+/* ======================== 화면 설정 적용 ======================== */
+function applyPrefs() {
+  const root = document.documentElement;
+  if (prefs.theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prefs.theme);
+  root.style.setProperty('--glass-a', prefs.glass);
+  const img = store.get('ync-wallimg', null);
+  document.body.style.backgroundImage = img ? `url(${img})` : WALLS[prefs.wall] || WALLS.mist;
+  document.body.classList.toggle('widget', !!prefs.widget);
+  const app = $('#app');
+  app.style.setProperty('--wx', prefs.wx + 'px'); app.style.setProperty('--wy', prefs.wy + 'px');
+  app.style.setProperty('--ww', prefs.ww + 'px'); app.style.setProperty('--wh', prefs.wh + 'px');
+  app.style.gridTemplateColumns = `minmax(0,1fr) ${prefs.side}px`;
+  if (window.innerWidth <= 760) app.style.gridTemplateColumns = '';
+  $('#tgKR').setAttribute('aria-pressed', prefs.kr); $('#tgCN').setAttribute('aria-pressed', prefs.cn);
+}
+
+/* ======================== 달력 그리기 ======================== */
+function dayInfo(d) {
+  const k = key(d), y = d.getFullYear();
+  const kr = prefs.kr ? (krHolidays(y)[k] || []) : [];
+  const custom = state.customHol.filter(h => h.date === k).map(h => h.name);
+  const cnRaw = cnHolidays(y)[k];
+  const cn = cnRaw && prefs.cn && (cnRaw.off || prefs.cnWork) ? cnRaw : null;
+  const todos = state.daily[k] || [];
+  const routines = state.routines.filter(r => routineOn(r, d));
+  return { k, kr: [...kr, ...custom], cn, todos, routines, rdone: state.rdone[k] || {} };
+}
+
+function render() {
+  $('#mNum').textContent = view.getMonth() + 1;
+  $('#mName').textContent = `${view.getMonth() + 1}월`;
+  $('#mYear').textContent = view.getFullYear();
+  const ws = prefs.weekStart;
+  $('#dow').innerHTML = '<div class="wkh"></div>' + [0,1,2,3,4,5,6].map(i => { const w = (i + ws) % 7; return `<div class="${w===0?'sun':w===6?'sat':''}">${DOW[w]}</div>`; }).join('');
+
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const start = addDays(first, -((first.getDay() - ws + 7) % 7));
+  const lastDay = new Date(view.getFullYear(), view.getMonth() + 1, 0);
+  const rows = Math.ceil(((first.getDay() - ws + 7) % 7 + lastDay.getDate()) / 7);
+  const grid = $('#grid');
+  grid.style.gridTemplateRows = window.innerWidth > 760 ? `repeat(${rows},minmax(0,1fr))` : '';
+  let html = '';
+  const selK = key(sel);
+  for (let r = 0; r < rows; r++) {
+    const rowStart = addDays(start, r * 7);
+    html += `<div class="wk">${isoWeek(addDays(rowStart, ws === 0 ? 1 : 0)).w}</div>`;
+    for (let c = 0; c < 7; c++) {
+      const d = addDays(rowStart, c), info = dayInfo(d), w = d.getDay();
+      const cls = ['cell'];
+      if (d.getMonth() !== view.getMonth()) cls.push('out');
+      if (w === 0) cls.push('sun'); if (w === 6) cls.push('sat');
+      if (info.kr.length) cls.push('kr-off');
+      if (info.cn && info.cn.off) cls.push('cn-off');
+      if (info.k === todayK) cls.push('today');
+      if (info.k === selK) cls.push('sel');
+      let lun = '';
+      if (prefs.lunar) { const l = lunar(d); if (l) lun = `<span class="lunar${l.d === 1 ? ' first' : ''}">${l.d === 1 ? (l.leap ? '윤' : '') + l.m + '월' : l.m + '.' + l.d}</span>`; }
+      const work = info.cn && !info.cn.off ? `<span class="badge-work" title="중국 조정 출근일 (${esc(info.cn.name)})">班</span>` : '';
+      let body = info.kr.map(n => `<div class="hol kr">${esc(n)}</div>`).join('');
+      if (info.cn && info.cn.off && info.cn.first) body += `<div class="hol cn">中 ${esc(info.cn.name)}</div>`;
+      const items = [
+        ...info.routines.map(r => ({ t: r.t, done: !!info.rdone[r.id], color: r.color, routine: true })),
+        ...info.todos.map(t => ({ t: t.t, done: t.done }))
+      ];
+      const maxItems = window.innerWidth > 760 ? Math.max(1, Math.floor((prefs.widget ? prefs.wh : window.innerHeight) / rows / 20) - 2 - info.kr.length) : 0;
+      items.slice(0, maxItems).forEach(it => {
+        body += `<div class="it${it.done ? ' done' : ''}${it.routine ? ' routine' : ''}"><i class="dot" style="${it.color ? 'background:' + it.color : ''}"></i>${esc(it.t)}</div>`;
+      });
+      if (items.length > maxItems && maxItems > 0) body += `<div class="more">+${items.length - maxItems}</div>`;
+      const dots = items.slice(0, 6).map(it => `<i style="${it.color ? 'background:' + it.color : ''}${it.done ? ';opacity:.35' : ''}"></i>`).join('');
+      html += `<div class="${cls.join(' ')}" data-k="${info.k}" role="button" tabindex="0" aria-label="${d.getMonth()+1}월 ${d.getDate()}일">
+        <div class="top"><span class="d">${d.getDate()}</span>${lun}${work}</div>${body}<div class="dots">${dots}</div></div>`;
+    }
+  }
+  grid.innerHTML = html;
+  renderSide();
+}
+
+/* ======================== 할 일 패널 ======================== */
+const CHECK = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--on-accent)"><path d="m2.5 6.2 2.3 2.3 4.7-5"/></svg>';
+function listHTML(scope, bucket, items, emptyMsg) {
+  const lis = items.map(t => `<li class="todo${t.done ? ' done' : ''}" data-scope="${scope}" data-b="${bucket}" data-id="${t.id}">
+      <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
+      <span class="txt" data-act="edit">${esc(t.t)}</span>
+      <span class="acts">${scope === 'daily' ? '<button data-act="later" title="다음 날로 미루기" aria-label="다음 날로 미루기">↷</button>' : ''}<button data-act="del" title="삭제" aria-label="삭제">✕</button></span>
+    </li>`).join('');
+  return `<ul class="todos">${lis || `<li class="empty">${emptyMsg}</li>`}</ul>
+    <input class="add" data-scope="${scope}" data-b="${bucket}" placeholder="할 일 추가 후 Enter" enterkeyhint="done">`;
+}
+function progress(items) {
+  const n = items.length, d = items.filter(x => x.done).length;
+  return { txt: n ? `${d}/${n}` : '', pct: n ? d / n * 100 : 0 };
+}
+function renderSide() {
+  const d = sel, info = dayInfo(d), k = info.k;
+  const wk = isoWeek(d), mon = monday(d), sun = addDays(mon, 6);
+  const mk = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  const daily = state.daily[k] || [], weekly = state.weekly[wk.key] || [], monthly = state.monthly[mk] || [];
+  const rItems = info.routines.map(r => ({ ...r, done: !!info.rdone[r.id] }));
+  const pd = progress([...daily, ...rItems]), pw = progress(weekly), pm = progress(monthly);
+  const isToday = k === todayK;
+  let tags = info.kr.map(n => `<span class="tag kr">${esc(n)}</span>`).join('');
+  if (info.cn) tags += info.cn.off ? `<span class="tag cn">中 ${esc(info.cn.name)} 휴무</span>` : `<span class="tag work">中 ${esc(info.cn.name)} 조정 출근일</span>`;
+  const l = lunar(d);
+  $('#side').innerHTML = `
+    <div>
+      <div class="day-title"><h2>${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일</h2><span>${isToday ? '오늘' : ''}${l ? ` 음 ${l.leap ? '윤' : ''}${l.m}.${l.d}` : ''}</span></div>
+      ${tags ? `<div class="day-tags">${tags}</div>` : ''}
+    </div>
+    <div class="sec">
+      <h3>하루 할 일 <small>${pd.txt}</small></h3>
+      <div class="prog"><b style="width:${pd.pct}%"></b></div>
+      ${rItems.length ? `<ul class="todos">${rItems.map(r => `<li class="todo${r.done ? ' done' : ''}" data-scope="routine" data-b="${k}" data-id="${r.id}">
+          <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
+          <span class="txt">${esc(r.t)}</span><i class="rdot" style="background:${r.color}" title="${freqLabel(r)}"></i></li>`).join('')}</ul>` : ''}
+      ${listHTML('daily', k, daily, rItems.length ? '' : '이 날 할 일이 없어요.')}
+    </div>
+    <div class="sec">
+      <h3>이번 주 <small>${wk.w}주차 · ${mon.getMonth() + 1}.${mon.getDate()}–${sun.getMonth() + 1}.${sun.getDate()} ${pw.txt ? '· ' + pw.txt : ''}</small></h3>
+      <div class="prog"><b style="width:${pw.pct}%"></b></div>
+      ${listHTML('weekly', wk.key, weekly, '이번 주 목표를 적어보세요.')}
+    </div>
+    <div class="sec">
+      <h3>${d.getMonth() + 1}월 <small>${pm.txt}</small></h3>
+      <div class="prog"><b style="width:${pm.pct}%"></b></div>
+      ${listHTML('monthly', mk, monthly, '이번 달 목표를 적어보세요.')}
+    </div>
+    <div class="sec">
+      <h3>반복 작업 <small>${state.routines.length}개</small>
+        <button class="icon-btn" id="openRoutine" aria-label="반복 작업 관리" title="반복 작업 관리"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
+      ${state.routines.length ? `<ul class="todos">${state.routines.map(r => `<li class="todo"><i class="rdot" style="background:${r.color}"></i><span class="txt">${esc(r.t)}</span><small style="color:var(--ink-3);font-size:11.5px">${freqLabel(r)}</small></li>`).join('')}</ul>`
+        : '<div class="empty">매일·매주 반복하는 일을 등록하면 달력에 자동으로 표시돼요.</div>'}
+    </div>`;
+}
+
+/* ======================== 이벤트 ======================== */
+function bucketOf(scope, b) { const o = state[scope]; return (o[b] = o[b] || []); }
+function cleanup(scope, b) { if (state[scope][b] && !state[scope][b].length) delete state[scope][b]; }
+
+$('#grid').addEventListener('click', e => {
+  const c = e.target.closest('.cell'); if (!c) return;
+  sel = parse(c.dataset.k);
+  if (sel.getMonth() !== view.getMonth()) { view = new Date(sel.getFullYear(), sel.getMonth(), 1); }
+  render();
+  if (window.innerWidth <= 760) $('#side').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+$('#grid').addEventListener('dblclick', e => {
+  const c = e.target.closest('.cell'); if (!c) return;
+  const inp = $('#side .add[data-scope="daily"]'); if (inp) inp.focus();
+});
+$('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('cell')) { e.preventDefault(); e.target.click(); } });
+
+$('#side').addEventListener('keydown', e => {
+  const inp = e.target;
+  if (inp.classList.contains('add') && e.key === 'Enter' && !e.isComposing) {
+    const v = inp.value.trim(); if (!v) return;
+    bucketOf(inp.dataset.scope, inp.dataset.b).push({ id: uid(), t: v, done: false });
+    const scope = inp.dataset.scope; save();
+    const again = $(`#side .add[data-scope="${scope}"]`); if (again) again.focus();
+  }
+  if (inp.classList.contains('edit')) {
+    if (e.key === 'Enter' && !e.isComposing) inp.blur();
+    if (e.key === 'Escape') { inp.dataset.cancel = '1'; inp.blur(); }
+  }
+});
+$('#side').addEventListener('click', e => {
+  if (e.target.closest('#openRoutine')) return openRoutine();
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const li = btn.closest('.todo'); const { scope, b, id } = li.dataset; const act = btn.dataset.act;
+  if (scope === 'routine') {
+    if (act !== 'toggle') return;
+    const m = (state.rdone[b] = state.rdone[b] || {});
+    if (m[id]) delete m[id]; else m[id] = 1;
+    if (!Object.keys(m).length) delete state.rdone[b];
+    return save();
+  }
+  const list = bucketOf(scope, b), item = list.find(x => x.id === id); if (!item) return;
+  if (act === 'toggle') { item.done = !item.done; return save(); }
+  if (act === 'del') { list.splice(list.indexOf(item), 1); cleanup(scope, b); return save(); }
+  if (act === 'later') {
+    list.splice(list.indexOf(item), 1); cleanup(scope, b);
+    const nk = key(addDays(parse(b), 1)); bucketOf('daily', nk).push(item);
+    toast(`${parse(nk).getMonth() + 1}월 ${parse(nk).getDate()}일로 옮겼어요`); return save();
+  }
+  if (act === 'edit') {
+    const span = btn, inp = document.createElement('input');
+    inp.className = 'edit'; inp.value = item.t; span.replaceWith(inp); inp.focus(); inp.select();
+    inp.addEventListener('blur', () => {
+      if (!inp.dataset.cancel) { const v = inp.value.trim(); if (v) item.t = v; else { list.splice(list.indexOf(item), 1); cleanup(scope, b); } }
+      save();
+    }, { once: true });
+  }
+});
+
+$('#prev').onclick = () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); render(); };
+$('#next').onclick = () => { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); render(); };
+$('#todayBtn').onclick = () => { sel = new Date(); view = new Date(sel.getFullYear(), sel.getMonth(), 1); render(); };
+$('#tgKR').onclick = () => { prefs.kr = !prefs.kr; savePrefs(); };
+$('#tgCN').onclick = () => { prefs.cn = !prefs.cn; savePrefs(); };
+document.addEventListener('wheel', e => {
+  if (!e.target.closest('#grid') || Math.abs(e.deltaY) < 30) return;
+  clearTimeout(document._wt); document._wt = setTimeout(() => { (e.deltaY > 0 ? $('#next') : $('#prev')).click(); }, 60);
+}, { passive: true });
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+/* ======================== 반복 작업 대화상자 ======================== */
+const rForm = { freq: 'daily', days: [1], color: COLORS[0] };
+function openRoutine() {
+  $('#rStart').value = key(sel); $('#rTitle').value = ''; $('#rDom').value = sel.getDate();
+  drawRoutineForm(); $('#dlgRoutine').showModal(); $('#rTitle').focus();
+}
+function drawRoutineForm() {
+  $('#rList').innerHTML = state.routines.map(r => `<li><i class="rdot" style="background:${r.color};margin:0"></i><span>${esc(r.t)} <small>${freqLabel(r)}${r.skipHol ? ' · 공휴일 제외' : ''}</small></span><button class="btn ghost" data-rdel="${r.id}">삭제</button></li>`).join('') || '<li><span class="empty">등록된 반복 작업이 없어요.</span></li>';
+  $('#rFreq').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === rForm.freq));
+  $('#rDaysRow').classList.toggle('hidden', rForm.freq !== 'weekly');
+  $('#rDomRow').classList.toggle('hidden', rForm.freq !== 'monthly');
+  $('#rDays').innerHTML = [1,2,3,4,5,6,0].map(i => `<button data-v="${i}" aria-pressed="${rForm.days.includes(i)}">${DOW[i]}</button>`).join('');
+  $('#rColors').innerHTML = COLORS.map(c => `<button class="sw" data-c="${c}" style="background:${c}" aria-pressed="${c === rForm.color}" aria-label="색상 ${c}"></button>`).join('');
+}
+$('#rFreq').onclick = e => { const b = e.target.closest('button'); if (b) { rForm.freq = b.dataset.v; drawRoutineForm(); } };
+$('#rDays').onclick = e => { const b = e.target.closest('button'); if (!b) return; const v = +b.dataset.v; rForm.days = rForm.days.includes(v) ? rForm.days.filter(x => x !== v) : [...rForm.days, v]; drawRoutineForm(); };
+$('#rColors').onclick = e => { const b = e.target.closest('button'); if (b) { rForm.color = b.dataset.c; drawRoutineForm(); } };
+$('#rList').onclick = e => { const b = e.target.closest('[data-rdel]'); if (!b) return; state.routines = state.routines.filter(r => r.id !== b.dataset.rdel); save(); drawRoutineForm(); };
+$('#rAdd').onclick = () => {
+  const t = $('#rTitle').value.trim(); if (!t) { $('#rTitle').focus(); return toast('작업 이름을 적어주세요'); }
+  if (rForm.freq === 'weekly' && !rForm.days.length) return toast('요일을 하나 이상 골라주세요');
+  state.routines.push({ id: uid(), t, freq: rForm.freq, days: rForm.days.slice(), dom: Math.min(31, Math.max(1, +$('#rDom').value || 1)),
+    start: $('#rStart').value || key(new Date()), skipHol: $('#rSkip').checked, color: rForm.color });
+  $('#rTitle').value = ''; save(); drawRoutineForm(); toast('반복 작업을 추가했어요');
+};
+
+/* ======================== 설정 대화상자 ======================== */
+function pressChips(el, v) { el.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v) === String(v))); }
+function fillSettings() {
+  pressChips($('#sWeek'), prefs.weekStart); pressChips($('#sTheme'), prefs.theme);
+  $('#sLunar').checked = prefs.lunar; $('#sGlass').value = prefs.glass;
+  $('#sWall').innerHTML = Object.entries(WALLS).map(([k, g]) => `<button class="sw" data-v="${k}" style="background:${g};width:32px" aria-pressed="${k === prefs.wall}" aria-label="배경 ${k}"></button>`).join('');
+  $('#sWidget').checked = prefs.widget; $('#sW').value = prefs.ww; $('#sH').value = prefs.wh; $('#sX').value = prefs.wx; $('#sY').value = prefs.wy; $('#sSide').value = prefs.side;
+  $('#scrSize').textContent = `${window.innerWidth} × ${window.innerHeight}px`;
+  $('#sKR').checked = prefs.kr; $('#sCN').checked = prefs.cn; $('#sCNW').checked = prefs.cnWork;
+  $('#chList').innerHTML = state.customHol.slice().sort((a, b) => a.date < b.date ? -1 : 1).map((h, i) => `<li><span>${h.date} <b>${esc(h.name)}</b></span><button class="btn ghost" data-chdel="${h.date}|${esc(h.name)}">삭제</button></li>`).join('');
+  Sync.drawSettings();
+}
+$('#openSettings').onclick = () => { fillSettings(); $('#dlgSettings').showModal(); };
+$('#setTabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('#setTabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('#dlgSettings [data-p]').forEach(p => p.classList.toggle('hidden', p.dataset.p !== b.dataset.t));
+};
+$('#sWeek').onclick = e => { const b = e.target.closest('button'); if (b) { prefs.weekStart = +b.dataset.v; savePrefs(); fillSettings(); } };
+$('#sTheme').onclick = e => { const b = e.target.closest('button'); if (b) { prefs.theme = b.dataset.v; savePrefs(); fillSettings(); } };
+$('#sWall').onclick = e => { const b = e.target.closest('button'); if (b) { prefs.wall = b.dataset.v; store.del('ync-wallimg'); savePrefs(); fillSettings(); } };
+$('#sLunar').onchange = e => { prefs.lunar = e.target.checked; savePrefs(); };
+$('#sGlass').oninput = e => { prefs.glass = +e.target.value; savePrefs(); };
+$('#sKR').onchange = e => { prefs.kr = e.target.checked; savePrefs(); };
+$('#sCN').onchange = e => { prefs.cn = e.target.checked; savePrefs(); };
+$('#sCNW').onchange = e => { prefs.cnWork = e.target.checked; savePrefs(); };
+$('#sWidget').onchange = e => { prefs.widget = e.target.checked; savePrefs(); };
+[['#sW', 'ww'], ['#sH', 'wh'], ['#sX', 'wx'], ['#sY', 'wy'], ['#sSide', 'side']].forEach(([s, p]) => $(s).onchange = e => { prefs[p] = Math.max(0, +e.target.value || 0); savePrefs(); });
+$('#sWallImg').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {   // 저장 용량을 넘지 않게 줄여서 저장
+    const scale = Math.min(1, 2560 / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas'); cv.width = img.width * scale; cv.height = img.height * scale;
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    let q = .85, data = cv.toDataURL('image/jpeg', q);
+    while (data.length > 3.5e6 && q > .4) { q -= .1; data = cv.toDataURL('image/jpeg', q); }
+    if (!store.set('ync-wallimg', data)) toast('이미지가 너무 커서 저장하지 못했어요');
+    URL.revokeObjectURL(url); applyPrefs();
+  };
+  img.src = url;
+};
+$('#sWallClear').onclick = () => { store.del('ync-wallimg'); applyPrefs(); };
+$('#chAdd').onclick = () => {
+  const d = $('#chDate').value, n = $('#chName').value.trim();
+  if (!d || !n) return toast('날짜와 이름을 모두 입력해주세요');
+  state.customHol.push({ date: d, name: n }); $('#chName').value = ''; save(); fillSettings();
+};
+$('#chList').onclick = e => {
+  const b = e.target.closest('[data-chdel]'); if (!b) return;
+  const [d, n] = b.dataset.chdel.split('|');
+  const i = state.customHol.findIndex(h => h.date === d && esc(h.name) === n); if (i > -1) state.customHol.splice(i, 1);
+  save(); fillSettings();
+};
+$('#dExport').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `여늘캘린더_백업_${todayK}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#dImport').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { const j = JSON.parse(t); if (!j || typeof j !== 'object' || !j.daily) throw 0; state = normalize(j); save(); toast('백업을 불러왔어요'); })
+    .catch(() => toast('이 파일은 캘린더 백업 파일이 아니에요'));
+  e.target.value = '';
+};
+
+/* ======================== 동기화 (Firebase) ======================== */
+const FB_VER = '10.12.2';
+const Sync = {
+  cfg: store.get('ync-fb', null), user: null, ref: null, unsub: null, timer: null, ready: false,
+  status(s, text) { const el = $('#sync'); el.dataset.s = s; el.querySelector('span').textContent = text; },
+  loadScript: src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }),
+  async init() {
+    if (!this.cfg) return this.status('local', '이 기기에 저장');
+    this.status('busy', '연결 중');
+    try {
+      const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+      await this.loadScript(base + 'firebase-app-compat.js');
+      await Promise.all([this.loadScript(base + 'firebase-auth-compat.js'), this.loadScript(base + 'firebase-firestore-compat.js')]);
+      if (!firebase.apps.length) firebase.initializeApp(this.cfg);
+      this.auth = firebase.auth(); this.db = firebase.firestore(); this.ready = true;
+      this.auth.onAuthStateChanged(u => this.onUser(u));
+    } catch (e) { this.status('error', '연결 실패'); this.msg('Firebase를 불러오지 못했어요. 인터넷 연결을 확인하세요.'); }
+  },
+  onUser(u) {
+    this.user = u; if (this.unsub) { this.unsub(); this.unsub = null; }
+    this.drawSettings();
+    if (!u) return this.status('local', '로그인 필요');
+    this.ref = this.db.collection('users').doc(u.uid).collection('desk').doc('main');
+    this.unsub = this.ref.onSnapshot(snap => {
+      if (!snap.exists) { this.pushNow(); return; }
+      const d = snap.data(); let remote;
+      try { remote = JSON.parse(d.json); } catch { return; }
+      if ((remote.updatedAt || 0) > state.updatedAt) { state = normalize(remote); store.set('ync-data', state); render(); }
+      else if ((remote.updatedAt || 0) < state.updatedAt) this.push();
+      if (!snap.metadata.hasPendingWrites) this.status('synced', '동기화됨');
+    }, err => { this.status('error', '동기화 오류'); this.msg(err.message); });
+  },
+  push() { if (!this.user) return; clearTimeout(this.timer); this.status('busy', '저장 중'); this.timer = setTimeout(() => this.pushNow(), 700); },
+  pushNow() {
+    if (!this.ref) return;
+    this.ref.set({ json: JSON.stringify(state), updatedAt: state.updatedAt })
+      .then(() => this.status('synced', '동기화됨'))
+      .catch(e => { this.status('error', '동기화 오류'); this.msg(e.message); });
+  },
+  msg(t) { const el = $('#syMsg'); if (el) el.textContent = t || ''; },
+  drawSettings() {
+    const has = !!this.cfg;
+    $('#syncSetup').classList.toggle('hidden', has); $('#syncConfigured').classList.toggle('hidden', !has);
+    if (!has) return;
+    $('#syncProj').textContent = this.cfg.projectId || '';
+    $('#syncLoggedOut').classList.toggle('hidden', !!this.user); $('#syncLoggedIn').classList.toggle('hidden', !this.user);
+    if (this.user) $('#syUser').textContent = this.user.email;
+  },
+  authError(e) {
+    const m = { 'auth/invalid-credential': '이메일이나 비밀번호가 맞지 않아요.', 'auth/wrong-password': '비밀번호가 맞지 않아요.', 'auth/user-not-found': '가입된 계정이 없어요. 계정 만들기를 눌러주세요.',
+      'auth/email-already-in-use': '이미 있는 계정이에요. 로그인을 눌러주세요.', 'auth/weak-password': '비밀번호를 6자 이상으로 정해주세요.', 'auth/invalid-email': '이메일 형식을 확인해주세요.',
+      'auth/operation-not-allowed': 'Firebase에서 이메일/비밀번호 로그인을 켜주세요.' };
+    this.msg(m[e.code] || e.message);
+  }
+};
+function parseCfg(t) {
+  const o = {};
+  ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'].forEach(k => {
+    const m = t.match(new RegExp(k + '["\']?\\s*:\\s*["\']([^"\']+)["\']')); if (m) o[k] = m[1];
+  });
+  return o.apiKey && o.projectId && o.appId ? o : null;
+}
+$('#sySave').onclick = () => {
+  const c = parseCfg($('#syCfg').value);
+  if (!c) return toast('apiKey, projectId, appId가 들어 있는지 확인해주세요');
+  Sync.cfg = c; store.set('ync-fb', c); Sync.drawSettings(); Sync.init();
+};
+$('#syncReset').onclick = () => { if (!confirm('동기화 연결을 해제할까요? 이 기기의 할 일은 그대로 남아요.')) return; store.del('ync-fb'); location.reload(); };
+$('#syLogin').onclick = () => { if (!Sync.ready) return Sync.msg('아직 연결 중이에요. 잠시 후 다시 눌러주세요.'); Sync.msg('');
+  Sync.auth.signInWithEmailAndPassword($('#syEmail').value.trim(), $('#syPw').value).catch(e => Sync.authError(e)); };
+$('#sySignup').onclick = () => { if (!Sync.ready) return Sync.msg('아직 연결 중이에요. 잠시 후 다시 눌러주세요.'); Sync.msg('');
+  Sync.auth.createUserWithEmailAndPassword($('#syEmail').value.trim(), $('#syPw').value).catch(e => Sync.authError(e)); };
+$('#syLogout').onclick = () => Sync.auth && Sync.auth.signOut();
+
+/* ======================== 시작 ======================== */
+applyPrefs(); render(); Sync.init();
+// 바탕화면에 계속 떠 있으니 날짜가 바뀌면 자동으로 오늘로 넘어감
+setInterval(() => {
+  const k = key(new Date());
+  if (k !== todayK) { const wasToday = key(sel) === todayK; todayK = k; if (wasToday) { sel = new Date(); view = new Date(sel.getFullYear(), sel.getMonth(), 1); } render(); }
+}, 30000);
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { applyPrefs(); render(); }, 150); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+</script>
+</body>
+</html>
