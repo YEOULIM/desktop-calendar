@@ -490,12 +490,12 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
   .cell .hol{display:none}
   .cell .hol.haskr{display:block;margin-top:3px;background:var(--kr);color:#fff;border-radius:4px;padding:1px 3px;font-size:8.5px;line-height:1.75;letter-spacing:-.02em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:clip}
   .cell .hol.haskr .kr{color:#fff}
-  .cell .pill{margin-top:3px;border-radius:4px;padding:1px 4px;font-size:10px;line-height:1.5;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip}
+  .cell .pill{margin-top:3px;border-radius:4px;padding:1px 3px;font-size:8.5px;line-height:1.75;letter-spacing:-.02em;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip}
   .cell .pill.dark{color:#1d2230}
   .cell .pill.done{opacity:.45;text-decoration:line-through}
   .cell .d{font-size:calc(13px*var(--fs-d))}
   .dots{display:flex}
-  .grid{--barh:17px;--evtop:calc(8px + 22px*var(--fs-d) + 13px)} .ev-bar{font-size:10px;padding:0 4px;margin:0 1px;border-radius:4px}
+  .grid{--barh:15px;--evtop:calc(8px + 22px*var(--fs-d) + 13px)} .ev-bar{font-size:8.5px;letter-spacing:-.02em;padding:0 3px;margin:0 1px;border-radius:4px}
   .side{overflow:visible}
   .cal,body.side-left .cal{order:1} .side,body.side-left .side{order:3} #splitter,#grip,body.widget #grip{display:none}
   .todo .acts{position:static;opacity:1;pointer-events:auto;box-shadow:none;background:transparent}
@@ -951,9 +951,11 @@ const normalize = s => { const o = Object.assign(structuredClone(DEF_STATE), s |
 function catOf(x) { return state.cats.find(c => c.id === (x && x.cat)) || state.cats[0]; }
 function catStyle(cid) { const c = state.cats.find(x => x.id === cid) || state.cats[0]; return c.style || (c.id === 'work' ? 'dot' : 'bar'); }
 const isWorkCat = x => catOf(x).id === 'work' || (catOf(x).id === state.cats[0].id && !state.cats.some(c => c.id === 'work'));
-function catOn(x) { return catOf(x).on !== false; }
+// 카테고리 보이기·숨기기는 기기마다 따로 (PC·폰 각자), 카테고리 이름·색은 동기화
+const catShown = c => !(prefs.catHidden || {})[c.id];
+function catOn(x) { return catShown(catOf(x)); }
 function vis(L) { return (L || []).filter(catOn); }
-function defaultCat() { const c = state.cats.find(c => c.id === prefs.lastCat && c.on !== false) || state.cats.find(c => c.on !== false) || state.cats[0]; return c.id; }
+function defaultCat() { const c = state.cats.find(c => c.id === prefs.lastCat && catShown(c)) || state.cats.find(c => catShown(c)) || state.cats[0]; return c.id; }
 function timeSort(L) { return [...L.filter(x => !x.time), ...L.filter(x => x.time).sort((a, b) => a.time < b.time ? -1 : 1)]; }
 const alarmsShown = d => alarmsOn(d).filter(catOn);
 const isWorkAlarm = a => a.freq !== 'once' && (a.panel || a.freq === 'weekdays' || (a.freq === 'weekly' && (a.days || []).length === 5 && [1, 2, 3, 4, 5].every(x => a.days.includes(x))));
@@ -983,13 +985,14 @@ function parseQuickEvent(text) {
   const end = rangeFix(a, b); if (end < a.k) return null;
   return { id: uid(), t: m[3].trim(), start: a.k, end, cat: eventCatDefault() };
 }
-function eventCatDefault() { const p = state.cats.find(c => c.id === 'plan' && c.on !== false); return p ? p.id : defaultCat(); }
+function eventCatDefault() { const p = state.cats.find(c => c.id === 'plan' && catShown(c)); return p ? p.id : defaultCat(); }
 const evShown = () => vis(state.events || []);
 const evOn = k => evShown().filter(e => e.start <= k && e.end >= k).sort((a, b) => a.start < b.start ? -1 : a.start > b.start ? 1 : b.end.localeCompare(a.end));
 const evRange = e => e.start === e.end ? fmtMD(e.start) : `${fmtMD(e.start)}~${fmtMD(e.end)}`;
 let state = normalize(store.get('ync-data', null));
 let prefs = Object.assign({}, DEF_PREFS, store.get('ync-prefs', {}));
 prefs.colors = Object.assign({}, prefs.colors);
+if (!prefs.catHidden) { prefs.catHidden = {}; (state.cats || []).forEach(c => { if (c.on === false) prefs.catHidden[c.id] = true; }); store.set('ync-prefs', prefs); }
 if (prefs.sidePx === undefined) {   // 예전 % 설정을 px로
   const r2 = v => Math.round(v * 2) / 2;
   prefs.sidePx = r2(14 * (prefs.fs || 1)); prefs.calPx = r2(11.5 * (prefs.fs || 1)); prefs.datePx = r2(13.5 * (prefs.fsD || 1));
@@ -1312,7 +1315,7 @@ function renderSide() {
   const dPlan = daily.filter(x => !isWorkCat(x)), dWork = daily.filter(isWorkCat);
   const rPlan = rItems.filter(x => !isWorkCat(x)), rWork = rItems.filter(isWorkCat);
   const workCat = (state.cats.find(c => c.id === 'work') || state.cats[0]).id;
-  const planCat = (state.cats.find(c => c.id !== workCat && c.on !== false) || state.cats.find(c => c.id !== workCat) || state.cats[0]).id;
+  const planCat = (state.cats.find(c => c.id !== workCat && catShown(c)) || state.cats.find(c => c.id !== workCat) || state.cats[0]).id;
   const routineList = L => L.length ? `<ul class="todos">${L.map(r => `<li class="todo${r.done ? ' done' : ''}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}">
           <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
           <span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span></li>`).join('')}</ul>` : '';
@@ -1329,7 +1332,7 @@ function renderSide() {
     <div class="sec cats">
       <h3><button class="cat-fold" data-catfold aria-expanded="${catOpen}"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 4.5 3 3 3-3"/></svg>카테고리</button>
         <button class="icon-btn" data-open="cats" aria-label="카테고리 추가·수정" title="카테고리 추가·수정"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
-      ${catOpen ? `<ul class="catlist">${state.cats.map(c => `<li data-cat="${c.id}" draggable="true" title="드래그해서 순서 바꾸기" class="${c.on === false ? 'off' : ''}"><button class="cbox" data-cattoggle style="--cc:${c.color}" aria-pressed="${c.on !== false}" aria-label="${esc(c.name)} 보이기">${CHECK}</button><span class="cname" data-cattoggle>${esc(c.name)}</span><button class="cedit" data-open="cats" title="카테고리 수정" aria-label="카테고리 수정">${IC.note}</button></li>`).join('')}</ul>` : ''}
+      ${catOpen ? `<ul class="catlist">${state.cats.map(c => `<li data-cat="${c.id}" draggable="true" title="드래그해서 순서 바꾸기" class="${catShown(c) ? '' : 'off'}"><button class="cbox" data-cattoggle style="--cc:${c.color}" aria-pressed="${catShown(c)}" aria-label="${esc(c.name)} 보이기">${CHECK}</button><span class="cname" data-cattoggle>${esc(c.name)}</span><button class="cedit" data-open="cats" title="카테고리 수정" aria-label="카테고리 수정">${IC.note}</button></li>`).join('')}</ul>` : ''}
     </div>
     <div class="sec biz" data-sec="biz">
       <h3>일일 루틴 <small>${pb.txt}</small>${addBtn('biz', '일일 루틴 추가 (15:30 포장처럼 시간을 앞에 쓰면 알림)')}</h3>
@@ -1642,7 +1645,7 @@ $('#side').addEventListener('click', e => {
   const evli = e.target.closest('[data-evid]'); if (evli) return openEvent({ edit: evli.dataset.evid });
   if (e.target.closest('[data-catfold]')) { prefs.catOpen = !(prefs.catOpen !== false); return savePrefs(); }
   const ct = e.target.closest('[data-cattoggle]');
-  if (ct) { const c = state.cats.find(x => x.id === ct.closest('li').dataset.cat); if (c) { c.on = c.on === false; save(); } return; }
+  if (ct) { const c = state.cats.find(x => x.id === ct.closest('li').dataset.cat); if (c) { prefs.catHidden = Object.assign({}, prefs.catHidden); if (catShown(c)) prefs.catHidden[c.id] = true; else delete prefs.catHidden[c.id]; store.set('ync-prefs', prefs); render(); } return; }
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const li = btn.closest('.todo'); const { scope, b, id } = li.dataset; const act = btn.dataset.act;
   if (scope === 'routine') {
@@ -2346,7 +2349,7 @@ function persistTarget() {
 function openCatPick(anchor, target) {
   const x = findItem(target); if (!x) return;
   popTarget = target; const cur = catOf(x).id;
-  $('#cpList').innerHTML = state.cats.map(c => `<button class="cp-item" data-cid="${c.id}" aria-pressed="${c.id === cur}"><i style="background:${c.color}"></i>${esc(c.name)}${c.on === false ? ' <small style="color:var(--ink-3)">(숨김)</small>' : ''}</button>`).join('');
+  $('#cpList').innerHTML = state.cats.map(c => `<button class="cp-item" data-cid="${c.id}" aria-pressed="${c.id === cur}"><i style="background:${c.color}"></i>${esc(c.name)}${!catShown(c) ? ' <small style="color:var(--ink-3)">(숨김)</small>' : ''}</button>`).join('');
   placePop($('#catPick'), anchor);
 }
 $('#catPick').addEventListener('mousedown', e => e.preventDefault());
@@ -2765,7 +2768,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790517967';
+const APP_BUILD = '1790518982';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
