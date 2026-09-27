@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" spellcheck="false">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -310,6 +310,29 @@ body.dragging .ev-bar{pointer-events:none}
 .chk:disabled{opacity:.4;cursor:default}
 #side [data-sec] .add{margin-top:2px}
 
+.it.pillbar{background:var(--pc);color:#fff;border-radius:4px;padding:0 6px;font-weight:600;margin:1px 0}
+.it.pillbar.dark{color:#1d2230}
+.it.pillbar .dot{display:none}
+.it.pillbar .bell.rep{color:inherit!important}
+.it.pillbar.done{opacity:.5;color:#fff;text-decoration:line-through}
+.it.pillbar .tm{color:inherit;opacity:.9}
+.it.pillbar .it-memo{color:inherit;opacity:.85;border-left-color:rgba(255,255,255,.5)}
+.it.pillbar .mm-ic{color:inherit}
+.cstyle{display:flex;gap:3px}
+.cstyle button{border:1px solid var(--line-2);background:transparent;border-radius:7px;padding:3px 8px;font-size:12px}
+.cstyle button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.cmove{display:flex;flex-direction:column}
+.cmove button{border:0;background:transparent;color:var(--ink-3);width:22px;height:15px;padding:0;line-height:1;font-size:10px}
+.cmove button:hover{color:var(--ink)}
+#cList li[draggable="true"],.catlist li[draggable="true"]{cursor:grab}
+.catlist li.drop-before,#cList li.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+.catlist li.drop-after,#cList li.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+.evc-row{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.evc-row .palette{grid-template-columns:repeat(12,22px);gap:4px;padding:0}
+.evc-row .palette .sw{width:22px;height:22px}
+.evc-custom{display:flex;gap:6px;align-items:center}
+.evc-custom input[type=color]{width:34px;height:30px;border:1px solid var(--line-2);border-radius:8px;padding:2px;background:transparent}
+
 /* 카테고리 */
 .cats h3{margin-bottom:4px}
 .cat-fold{border:0;background:transparent;padding:0;font-weight:700;font-size:inherit;display:flex;gap:4px;align-items:center;color:var(--ink)}
@@ -482,7 +505,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
-<body>
+<body spellcheck="false">
 <button class="panel" id="mini" aria-label="캘린더 펼치기">
   <span class="mnum" id="miniNum"></span>
   <span class="mtxt"><b id="miniDate"></b><span id="miniInfo"></span></span>
@@ -558,6 +581,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
       <div class="row"><label>시작일<small>9/27처럼 쓰면 올해로 들어가요</small></label><div class="date-pair"><input class="field" type="text" id="eStartTxt" placeholder="9/27" inputmode="numeric"><input class="field" type="date" id="eStart"></div></div>
       <div class="row"><label>종료일<small>하루짜리면 비워둬도 돼요</small></label><div class="date-pair"><input class="field" type="text" id="eEndTxt" placeholder="10/6" inputmode="numeric"><input class="field" type="date" id="eEnd"></div></div>
       <div class="row"><label>카테고리</label><div class="chips" id="eCats"></div></div>
+      <div class="row"><label>막대 색<small>고르지 않으면 카테고리 색</small></label><div class="evc-row"><div class="palette" id="eColors"></div><div class="evc-custom"><input type="color" id="ePick" aria-label="색 직접 고르기"><input class="field" id="eHex" placeholder="#3566D4" maxlength="7" style="width:92px" aria-label="색상 코드"><button class="btn ghost sm" id="eColorClear" type="button">카테고리 색</button></div></div></div>
       <div class="row"><label>메모</label><textarea class="field" id="eMemo" rows="2" style="flex:2;min-height:0;font-family:inherit;font-size:inherit"></textarea></div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:12px"><button class="btn danger hidden" id="eDel" type="button">일정 삭제</button><div class="spacer"></div><button class="btn" id="eSave">일정 추가</button></div>
       <p class="note">할 일 입력칸이나 날짜 카드에 "9/27~10/6 광고비 프로모션"처럼 기간을 맨 앞에 써도 바로 기간 일정이 돼요.</p>
@@ -726,6 +750,9 @@ service cloud.firestore {
       <div data-p="data" class="hidden">
         <p class="note">할 일·반복 작업·알림·직접 추가한 휴일을 파일로 내보내거나 불러와요. 불러오면 지금 내용이 파일 내용으로 바뀌어요.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dExport">백업 파일 내보내기</button><label class="btn ghost" style="display:inline-flex;align-items:center">백업 파일 불러오기<input type="file" id="dImport" accept="application/json" class="hidden"></label></div>
+        <p class="note" style="margin-top:14px">바탕화면에서는 파일 저장·열기가 막혀 있어서, 아래처럼 <b>복사해서 보관</b>하고 <b>붙여넣어서 불러와요</b>. 복사한 내용은 메모장·카톡 나에게 보내기 등에 붙여넣어 두면 돼요.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn" id="dCopy" type="button">백업 내용 복사</button><button class="btn ghost" id="dPasteLoad" type="button">붙여넣은 내용 불러오기</button></div>
+        <textarea class="field" id="dText" placeholder="백업 내용이 여기에 표시돼요. 불러올 때는 복사해둔 내용을 여기에 붙여넣고 '붙여넣은 내용 불러오기'를 누르세요." style="min-height:110px"></textarea>
       </div>
     </div>
   </div>
@@ -922,6 +949,8 @@ const PALETTE = [
 const COLOR_TARGETS = [['ink', '글자'], ['ink-2', '보조 글자'], ['ink-3', '흐린 글자 (음력·안내)'], ['accent', '강조 (오늘·체크)'], ['kr', '일요일·한국 공휴일'], ['sat', '토요일'], ['cn', '중국 공휴일']];
 const normalize = s => { const o = Object.assign(structuredClone(DEF_STATE), s || {}); if (!Array.isArray(o.cats) || !o.cats.length) o.cats = structuredClone(DEF_CATS); return o; };
 function catOf(x) { return state.cats.find(c => c.id === (x && x.cat)) || state.cats[0]; }
+function catStyle(cid) { const c = state.cats.find(x => x.id === cid) || state.cats[0]; return c.style || (c.id === 'work' ? 'dot' : 'bar'); }
+const isWorkCat = x => catOf(x).id === 'work' || (catOf(x).id === state.cats[0].id && !state.cats.some(c => c.id === 'work'));
 function catOn(x) { return catOf(x).on !== false; }
 function vis(L) { return (L || []).filter(catOn); }
 function defaultCat() { const c = state.cats.find(c => c.id === prefs.lastCat && c.on !== false) || state.cats.find(c => c.on !== false) || state.cats[0]; return c.id; }
@@ -1150,7 +1179,7 @@ function render() {
     segs.forEach(g => { let L = laneEnd.findIndex(x => x < g.c0); if (L < 0) { L = laneEnd.length; laneEnd.push(-1); } laneEnd[L] = g.c1; g.lane = L; });
     const lanes = laneEnd.length;
     segs.forEach(g => {
-      const c = catOf(g.e).color, dark = lum(c) > .5, allOut = !prefs.rolling && [g.c0, g.c1].every(i => addDays(rowStart, i).getMonth() !== view.getMonth());
+      const c = g.e.color || catOf(g.e).color, dark = lum(c) > .5, allOut = !prefs.rolling && [g.c0, g.c1].every(i => addDays(rowStart, i).getMonth() !== view.getMonth());
       bars += `<div draggable="true" class="ev-bar${g.e.start < rs0 ? ' cl' : ''}${g.e.end > rs6 ? ' cr' : ''}${dark ? ' dark' : ''}${allOut ? ' out' : ''}" data-ev="${g.e.id}" data-t="${esc(g.e.t)}" data-range="${esc(evRange(g.e))}" data-memo="${esc(g.e.memo || '')}"
         style="grid-row:${r + 1};grid-column:${g.c0 + colOff}/${g.c1 + colOff + 1};margin-top:calc(var(--evtop) + ${g.lane}*(var(--barh) + 2px));background:${c}">${esc(g.e.t)}</div>`;
     });
@@ -1176,11 +1205,12 @@ function render() {
         ...info.routines.map(r => ({ t: r.t, done: !!info.rdone[r.id], color: catOf(r).color, cid: catOf(r).id, routine: true, kind: 'routine', id: r.id })),
         ...info.todos.map(t => ({ t: t.t, done: t.done, memo: t.memo, st: t.style, kind: 'todo', id: t.id, color: catOf(t).color, cid: catOf(t).id, time: t.time }))
       ];
-      items.sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));   // 완료한 건 맨 아래로
-      const isPill = it => !isWide() && (it.kind === 'todo' || it.kind === 'routine') && it.cid !== 'work';   // 폰: 업무 외 일정은 색 막대
+      items.sort((a, b) => (a.done && !a.routine ? 1 : 0) - (b.done && !b.routine ? 1 : 0));   // 완료한 할 일은 맨 아래로 (반복 작업은 완료해도 제자리)
+      const isPill = it => !isWide() && (it.kind === 'todo' || it.kind === 'routine') && catStyle(it.cid) === 'bar';   // 폰: '막대' 카테고리는 색 막대
       if (!isWide()) items.filter(isPill).forEach(it => { body += `<div class="pill${it.done ? ' done' : ''}${lum(it.color) > .5 ? ' dark' : ''}" style="background:${it.color}">${it.time ? it.time + ' ' : ''}${esc(it.t)}</div>`; });
       if (isWide()) items.forEach(it => {
-        body += `<div class="it${it.done ? ' done' : ''}${it.routine ? ' routine' : ''}${it.alarm ? ' alarm' : ''}" data-kind="${it.kind}" data-id="${it.id}"${it.kind === 'todo' ? ' draggable="true"' : ''}${it.memo ? ` data-memo="${esc(it.memo)}" data-t="${esc(it.t)}"` : ''}>${it.alarm ? `<svg class="bell" style="color:${it.color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>` : it.routine ? `<svg class="bell rep" style="color:${it.color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>` : `<i class="dot" style="${it.color ? 'background:' + it.color : it.st && it.st.c ? 'background:' + it.st.c : ''}"></i>`}<span style="${it.done ? '' : itemStyle(it.st)}">${it.time ? `<b class="tm">${it.time}</b>` : ''}${esc(it.t)}${it.memo ? (prefs.showMemo ? `<span class="it-memo">${esc(it.memo)}</span>` : `<svg class="mm-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>`) : ''}</span><button class="x" title="${it.kind === 'todo' ? '삭제' : '이 날만 삭제'}" aria-label="삭제">✕</button></div>`;
+        const bar = (it.kind === 'todo' || it.kind === 'routine') && catStyle(it.cid) === 'bar';
+        body += `<div class="it${it.done ? ' done' : ''}${it.routine ? ' routine' : ''}${it.alarm ? ' alarm' : ''}${bar ? ' pillbar' + (lum(it.color) > .5 ? ' dark' : '') : ''}"${bar ? ` style="--pc:${it.color}"` : ''} data-kind="${it.kind}" data-id="${it.id}"${it.kind === 'todo' ? ' draggable="true"' : ''}${it.memo ? ` data-memo="${esc(it.memo)}" data-t="${esc(it.t)}"` : ''}>${it.alarm ? `<svg class="bell" style="color:${it.color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>` : it.routine ? `<svg class="bell rep" style="color:${it.color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>` : `<i class="dot" style="${it.color ? 'background:' + it.color : it.st && it.st.c ? 'background:' + it.st.c : ''}"></i>`}<span style="${it.done ? '' : itemStyle(it.st)}">${it.time ? `<b class="tm">${it.time}</b>` : ''}${esc(it.t)}${it.memo ? (prefs.showMemo ? `<span class="it-memo">${esc(it.memo)}</span>` : `<svg class="mm-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>`) : ''}</span><button class="x" title="${it.kind === 'todo' ? '삭제' : '이 날만 삭제'}" aria-label="삭제">✕</button></div>`;
       });
       const dots = items.filter(it => !isPill(it)).slice(0, 6).map(it => `<i style="${it.color ? 'background:' + it.color : it.alarm ? 'background:var(--accent)' : ''}${it.done ? ';opacity:.35' : ''}"></i>`).join('');
       html += `<div class="${cls.join(' ')}" style="grid-row:${r + 1};grid-column:${c + colOff};${dc ? `--dc:${dc}` : ''}" data-k="${info.k}" role="button" tabindex="0" aria-label="${d.getMonth()+1}월 ${d.getDate()}일" title="더블클릭하면 이 칸에서 바로 할 일을 추가해요">
@@ -1244,17 +1274,17 @@ let inlineAdd = null;   // + 버튼이나 더블클릭으로 연 입력칸
 const addBtn = (sec, title) => `<button class="icon-btn" data-addsec="${sec}" aria-label="${title}" title="${title} · 더블클릭해도 돼요"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button>`;
 function openAdd(sec) {
   inlineAdd = sec; renderSide();
-  const inp = sec === 'biz' ? $('#side .add-biz') : $(`#side .add[data-scope="${sec}"]`);
+  const inp = $(`#side [data-sec="${sec}"] .add`);
   if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest' }); }
 }
 function closeAdd() { if (!inlineAdd) return; inlineAdd = null; renderSide(); releaseFocus(); }
-function listHTML(scope, bucket, items) {
+function listHTML(scope, bucket, items, secKey = scope, cat = null) {
   const lis = items.map(t => `<li class="todo${t.done ? ' done' : ''}" style="--cc:${catOf(t).color}" data-scope="${scope}" data-b="${bucket}" data-id="${t.id}" draggable="true">
       <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
       <div class="tbody"><span class="txt" data-act="edit" style="${t.done ? '' : itemStyle(t.style)}">${t.time ? `<b class="tm">${t.time}</b>` : ''}${esc(t.t)}${t.from ? `<small class="from">${+t.from.slice(5, 7)}.${+t.from.slice(8)}부터</small>` : ''}</span>${t.memo ? `<div class="memo" data-act="memo" title="눌러서 수정">${esc(t.memo)}</div>` : ''}</div>
       <span class="acts"><button data-act="pen" class="${t.memo ? 'has' : ''}" title="할 일·메모 수정" aria-label="할 일과 메모 수정">${IC.note}</button>${scope === 'daily' ? '<button data-act="later" title="다음 날로 미루기" aria-label="다음 날로 미루기">↷</button>' : ''}<button data-act="del" title="삭제" aria-label="삭제">✕</button></span>
     </li>`).join('');
-  return `${lis ? `<ul class="todos">${lis}</ul>` : ''}${inlineAdd === scope ? `<input class="add" data-scope="${scope}" data-b="${bucket}" placeholder="입력 후 Enter · Esc로 닫기" enterkeyhint="done">` : ''}`;
+  return `${lis ? `<ul class="todos">${lis}</ul>` : ''}${inlineAdd === secKey ? `<input class="add" data-scope="${scope}" data-b="${bucket}"${cat ? ` data-cat="${cat}"` : ''} placeholder="입력 후 Enter · Esc로 닫기" enterkeyhint="done">` : ''}`;
 }
 function progress(items) {
   const n = items.length, d = items.filter(x => x.done).length;
@@ -1279,7 +1309,14 @@ function renderSide() {
   const bizDay = d.getDay() >= 1 && d.getDay() <= 5 && !krOff(d);
   const bizToday = bizAll.filter(r => ruleOn(r, d)).map(r => ({ ...r, done: !!(state.rdone[k] || {})[r.id] }));
   const pb = progress(bizToday);
-  const pd = progress([...daily, ...rItems]), pw = progress(weekly), pm = progress(monthly);
+  const dPlan = daily.filter(x => !isWorkCat(x)), dWork = daily.filter(isWorkCat);
+  const rPlan = rItems.filter(x => !isWorkCat(x)), rWork = rItems.filter(isWorkCat);
+  const workCat = (state.cats.find(c => c.id === 'work') || state.cats[0]).id;
+  const planCat = (state.cats.find(c => c.id !== workCat && c.on !== false) || state.cats.find(c => c.id !== workCat) || state.cats[0]).id;
+  const routineList = L => L.length ? `<ul class="todos">${L.map(r => `<li class="todo${r.done ? ' done' : ''}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}">
+          <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
+          <span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span></li>`).join('')}</ul>` : '';
+  const pd = progress([...dWork, ...rWork]), pp = progress([...dPlan, ...rPlan]), pw = progress(weekly), pm = progress(monthly);
   let tags = info.kr.map(n => `<span class="tag kr">${esc(n)}</span>`).join('');
   if (info.cn) tags += info.cn.off ? `<span class="tag cn">${esc(info.cn.name)} 휴무</span>` : `<span class="tag work">${esc(info.cn.name)} 조정 출근일</span>`;
   const l = lunar(d);
@@ -1292,7 +1329,7 @@ function renderSide() {
     <div class="sec cats">
       <h3><button class="cat-fold" data-catfold aria-expanded="${catOpen}"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 4.5 3 3 3-3"/></svg>카테고리</button>
         <button class="icon-btn" data-open="cats" aria-label="카테고리 추가·수정" title="카테고리 추가·수정"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg></button></h3>
-      ${catOpen ? `<ul class="catlist">${state.cats.map(c => `<li data-cat="${c.id}" class="${c.on === false ? 'off' : ''}"><button class="cbox" data-cattoggle style="--cc:${c.color}" aria-pressed="${c.on !== false}" aria-label="${esc(c.name)} 보이기">${CHECK}</button><span class="cname" data-cattoggle>${esc(c.name)}</span><button class="cedit" data-open="cats" title="카테고리 수정" aria-label="카테고리 수정">${IC.note}</button></li>`).join('')}</ul>` : ''}
+      ${catOpen ? `<ul class="catlist">${state.cats.map(c => `<li data-cat="${c.id}" draggable="true" title="드래그해서 순서 바꾸기" class="${c.on === false ? 'off' : ''}"><button class="cbox" data-cattoggle style="--cc:${c.color}" aria-pressed="${c.on !== false}" aria-label="${esc(c.name)} 보이기">${CHECK}</button><span class="cname" data-cattoggle>${esc(c.name)}</span><button class="cedit" data-open="cats" title="카테고리 수정" aria-label="카테고리 수정">${IC.note}</button></li>`).join('')}</ul>` : ''}
     </div>
     <div class="sec biz" data-sec="biz">
       <h3>일일 루틴 <small>${pb.txt}</small>${addBtn('biz', '일일 루틴 추가 (15:30 포장처럼 시간을 앞에 쓰면 알림)')}</h3>
@@ -1304,14 +1341,17 @@ function renderSide() {
           <span class="acts"><button data-bizset="${r.id}" title="카테고리·종료일 설정" aria-label="설정">${IC.note}</button><button data-bizdel="${r.id}" title="삭제" aria-label="삭제">✕</button></span></li>`).join('')}</ul>` : ''}
       ${inlineAdd === 'biz' ? '<input class="add add-biz" placeholder="입력 후 Enter · 15:30 포장 → 알림" enterkeyhint="done">' : ''}
     </div>
+    <div class="sec" data-sec="plan">
+      <h3>일정 <small>${pp.txt}</small>${addBtn('plan', '일정 추가 (9/27~10/6 내용 → 기간 일정)')}</h3>
+      ${evOn(k).length ? `<div class="evlist">${evOn(k).map(ev => { const c = ev.color || catOf(ev).color; return `<div class="evchip${lum(c) > .5 ? ' dark' : ''}" data-evid="${ev.id}" title="눌러서 수정" style="background:${c}"><span>${esc(ev.t)}</span><small>${evRange(ev)}</small></div>`; }).join('')}</div>` : ''}
+      ${routineList(rPlan)}
+      ${listHTML('daily', k, dPlan, 'plan', planCat)}
+    </div>
     <div class="sec" data-sec="daily">
-      <h3>할 일·일정 <small>${pd.txt}</small>${addBtn('daily', '할 일·일정 추가 (9/27~10/6 내용 → 기간 일정)')}</h3>
-      ${daily.length + rItems.length ? `<div class="prog"><b style="width:${pd.pct}%"></b></div>` : ''}
-      ${evOn(k).length ? `<div class="evlist">${evOn(k).map(ev => { const c = catOf(ev).color; return `<div class="evchip${lum(c) > .5 ? ' dark' : ''}" data-evid="${ev.id}" title="눌러서 수정" style="background:${c}"><span>${esc(ev.t)}</span><small>${evRange(ev)}</small></div>`; }).join('')}</div>` : ''}
-      ${rItems.length ? `<ul class="todos">${rItems.map(r => `<li class="todo${r.done ? ' done' : ''}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}">
-          <button class="chk" data-act="toggle" aria-label="완료 표시">${CHECK}</button>
-          <span class="txt"><svg class="ricon" style="color:${catOf(r).color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${esc(r.t)}</span><i class="rdot" style="background:${catOf(r).color}" title="${freqLabel(r)}"></i></li>`).join('')}</ul>` : ''}
-      ${listHTML('daily', k, daily)}
+      <h3>할 일 <small>${pd.txt}</small>${addBtn('daily', '할 일 추가')}</h3>
+      ${dWork.length + rWork.length ? `<div class="prog"><b style="width:${pd.pct}%"></b></div>` : ''}
+      ${routineList(rWork)}
+      ${listHTML('daily', k, dWork, 'daily', workCat)}
     </div>
     <div class="sec" data-sec="weekly">
       <h3>이번 주 <small>${wk.w}주차 · ${mon.getMonth() + 1}.${mon.getDate()}–${sun.getMonth() + 1}.${sun.getDate()} ${pw.txt ? '· ' + pw.txt : ''}</small>${addBtn('weekly', '이번 주 업무·일정 추가')}</h3>
@@ -1482,7 +1522,7 @@ function ncDrawFixed(k) {
   const ev = evOn(k);
   if (!al.length && !rs.length && !ev.length) return;
   const box = document.createElement('div'); box.className = 'nc-fixed';
-  box.innerHTML = ev.map(x => `<div class="nc-fx" data-kind="event" data-id="${x.id}"><span class="fx-bul"><i style="border:0;width:12px;height:6px;border-radius:3px;background:${catOf(x).color}"></i></span><span class="fx-t" title="눌러서 일정 수정">${esc(x.t)}<span class="fx-tag">${evRange(x)}</span></span><button class="fx-x" title="일정 삭제">✕</button></div>`).join('')
+  box.innerHTML = ev.map(x => `<div class="nc-fx" data-kind="event" data-id="${x.id}"><span class="fx-bul"><i style="border:0;width:12px;height:6px;border-radius:3px;background:${x.color || catOf(x).color}"></i></span><span class="fx-t" title="눌러서 일정 수정">${esc(x.t)}<span class="fx-tag">${evRange(x)}</span></span><button class="fx-x" title="일정 삭제">✕</button></div>`).join('')
     + al.map(a => `<div class="nc-fx" data-kind="alarm" data-id="${a.id}"><span class="fx-bul" style="color:${catOf(a).color}">${IC.bell}</span><span class="fx-t" title="눌러서 알림 수정">[${a.time}] ${esc(a.t)}<span class="fx-tag">${freqLabel(a)}</span></span><button class="fx-x" title="이 날만 빼기">✕</button></div>`).join('')
     + rs.map(r => `<div class="nc-fx${rd[r.id] ? ' done' : ''}" data-kind="routine" data-id="${r.id}"><button class="fx-bul" title="완료 표시" style="color:${catOf(r).color}"><i></i></button><span class="fx-t" title="눌러서 반복 작업 수정">${esc(r.t)}<span class="fx-tag">${freqLabel(r)}</span></span><button class="fx-x" title="이 날만 빼기">✕</button></div>`).join('');
   ncBody.prepend(box);
@@ -1588,11 +1628,11 @@ $('#side').addEventListener('keydown', e => {
     if (e.key === 'Escape') return closeAdd();
     if (e.key === 'Enter' && !e.isComposing) {
       const v = inp.value.trim(); if (!v) return closeAdd();
-      const scope = inp.dataset.scope;
+      const scope = inp.dataset.scope, secKey = inp.closest('[data-sec]').dataset.sec;
       const qev = parseQuickEvent(v);
-      if (qev) { state.events.push(qev); save(); toast(`${evRange(qev)} 기간 일정을 추가했어요`); return openAdd(scope); }
-      bucketOf(scope, inp.dataset.b).push({ id: uid(), t: v, done: false, cat: defaultCat() });
-      save(); openAdd(scope);
+      if (qev) { state.events.push(qev); save(); toast(`${evRange(qev)} 기간 일정을 추가했어요`); return openAdd(secKey); }
+      bucketOf(scope, inp.dataset.b).push({ id: uid(), t: v, done: false, cat: inp.dataset.cat || defaultCat() });
+      save(); openAdd(secKey);
     }
   }
 });
@@ -1993,6 +2033,18 @@ $('#dExport').onclick = () => {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `여늘캘린더_백업_${todayK}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
+$('#dCopy').onclick = () => {
+  const ta = $('#dText'); ta.value = JSON.stringify(state); ta.focus(); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch {}
+  if (!ok && navigator.clipboard) navigator.clipboard.writeText(ta.value).then(() => toast('복사했어요. 메모장 등에 붙여넣어 보관하세요'), () => toast('아래 칸의 내용을 전체 선택(Ctrl+A)해서 복사해주세요'));
+  else toast(ok ? '복사했어요. 메모장 등에 붙여넣어 보관하세요' : '아래 칸의 내용을 전체 선택(Ctrl+A)해서 복사해주세요');
+  ta.blur();
+};
+$('#dPasteLoad').onclick = () => {
+  const t = $('#dText').value.trim(); if (!t) return toast('복사해둔 백업 내용을 칸에 붙여넣어주세요');
+  try { const j = JSON.parse(t); if (!j || typeof j !== 'object' || !j.daily) throw 0; state = normalize(j); state.updatedAt = Date.now(); save(); $('#dText').value = ''; toast('백업을 불러왔어요'); }
+  catch { toast('캘린더 백업 내용이 아니에요. 복사한 내용을 그대로 붙여넣어주세요'); }
+};
 $('#dImport').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   f.text().then(t => { const j = JSON.parse(t); if (!j || typeof j !== 'object' || !j.daily) throw 0; state = normalize(j); save(); toast('백업을 불러왔어요'); })
@@ -2325,7 +2377,7 @@ function catCount(id) {
 }
 function openCats() { drawCats(); $('#dlgCats').showModal(); }
 function drawCats() {
-  $('#cList').innerHTML = state.cats.map(c => `<li data-cid="${c.id}"><button class="sw" data-ccolor style="background:${c.color}" title="색 바꾸기" aria-label="색 바꾸기"></button><input class="field" data-cname value="${esc(c.name)}" aria-label="카테고리 이름"><small>${catCount(c.id)}개</small><button class="btn ghost sm" data-cdel>삭제</button></li>`).join('');
+  $('#cList').innerHTML = state.cats.map((c, i) => `<li data-cid="${c.id}" draggable="true"><span class="cmove"><button data-cup title="위로" ${i === 0 ? 'disabled' : ''}>▲</button><button data-cdown title="아래로" ${i === state.cats.length - 1 ? 'disabled' : ''}>▼</button></span><button class="sw" data-ccolor style="background:${c.color}" title="색 바꾸기" aria-label="색 바꾸기"></button><input class="field" data-cname value="${esc(c.name)}" aria-label="카테고리 이름"><span class="cstyle" title="캘린더에 표시하는 방식"><button data-cstyle="dot" aria-pressed="${catStyle(c.id) === 'dot'}">● 점</button><button data-cstyle="bar" aria-pressed="${catStyle(c.id) === 'bar'}">▬ 막대</button></span><small>${catCount(c.id)}개</small><button class="btn ghost sm" data-cdel>삭제</button></li>`).join('');
   $('#cNewColor').style.background = newCatColor;
 }
 $('#cList').addEventListener('change', e => {
@@ -2337,6 +2389,13 @@ $('#cList').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target
 $('#cList').addEventListener('click', e => {
   const li = e.target.closest('li'); if (!li) return;
   const id = li.dataset.cid;
+  const cs = e.target.closest('[data-cstyle]');
+  if (cs) { const c = state.cats.find(x => x.id === id); c.style = cs.dataset.cstyle; save(); drawCats(); return; }
+  if (e.target.closest('[data-cup]') || e.target.closest('[data-cdown]')) {
+    const i = state.cats.findIndex(x => x.id === id), j = i + (e.target.closest('[data-cup]') ? -1 : 1);
+    if (j < 0 || j >= state.cats.length) return;
+    [state.cats[i], state.cats[j]] = [state.cats[j], state.cats[i]]; save(); drawCats(); return;
+  }
   if (e.target.closest('[data-ccolor]')) { ccTarget = id; drawCC(state.cats.find(c => c.id === id).color); return showCC(e.target.closest('[data-ccolor]')); }
   const del = e.target.closest('[data-cdel]'); if (!del) return;
   if (state.cats.length <= 1) return toast('카테고리는 하나 이상 있어야 해요');
@@ -2377,13 +2436,32 @@ function openEvent(o = {}) {
   $('#eStart').value = s0; $('#eStartTxt').value = fmtMD(s0);
   $('#eEnd').value = e0; $('#eEndTxt').value = fmtMD(e0);
   $('#eMemo').value = ev ? (ev.memo || '') : '';
-  eCat = ev ? catOf(ev).id : eventCatDefault();
+  eCat = ev ? catOf(ev).id : eventCatDefault(); eColor = ev && ev.color ? ev.color : null;
   $('#eHead').textContent = ev ? '기간 일정 수정' : '기간 일정 추가';
   $('#eSave').textContent = ev ? '수정 저장' : '일정 추가';
   $('#eDel').classList.toggle('hidden', !ev); $('#eDel').textContent = '일정 삭제'; delete $('#eDel').dataset.armed;
   drawEventCats(); $('#dlgEvent').showModal(); $('#eTitle').focus();
 }
-function drawEventCats() { $('#eCats').innerHTML = catChips(eCat); }
+let eColor = null;
+const normHex = v => { v = String(v || '').trim().replace(/^#?/, '#'); if (/^#[0-9a-f]{3}$/i.test(v)) v = '#' + v.slice(1).split('').map(c => c + c).join(''); return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null; };
+function drawEventCats() {
+  $('#eCats').innerHTML = catChips(eCat);
+  const cur = eColor || catOf({ cat: eCat }).color;
+  $('#eColors').innerHTML = CAT_COLORS.map(c => `<button class="sw" type="button" data-c="${c}" style="background:${c}" aria-pressed="${eColor === c}" aria-label="${c}"></button>`).join('');
+  $('#ePick').value = cur; $('#eHex').value = eColor ? eColor.toUpperCase() : '';
+  $('#eHex').placeholder = catOf({ cat: eCat }).color.toUpperCase();
+  $('#eColorClear').classList.toggle('hidden', !eColor);
+}
+function applyHex(silent) {
+  const v = $('#eHex').value.trim(); if (!v) return true;
+  const h = normHex(v); if (!h) { toast('색상 코드는 #3566D4 처럼 써주세요'); $('#eHex').focus(); return false; }
+  eColor = h; if (!silent) drawEventCats(); return true;
+}
+$('#eColors').onclick = e => { const b = e.target.closest('[data-c]'); if (b) { eColor = b.dataset.c; drawEventCats(); } };
+$('#ePick').addEventListener('input', e => { eColor = e.target.value; $('#eHex').value = eColor.toUpperCase(); $('#eColors').querySelectorAll('.sw').forEach(s => s.setAttribute('aria-pressed', s.dataset.c === eColor)); $('#eColorClear').classList.remove('hidden'); });
+$('#eHex').addEventListener('change', () => applyHex(false));
+$('#eHex').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyHex(false); } });
+$('#eColorClear').onclick = () => { eColor = null; drawEventCats(); };
 $('#eCats').onclick = e => { const b = e.target.closest('button'); if (b) { eCat = b.dataset.v; drawEventCats(); } };
 function syncTxt(which) {
   const txt = $(`#e${which}Txt`), inp = $(`#e${which}`);
@@ -2406,9 +2484,10 @@ $('#eSave').onclick = () => {
   if (!s0) return toast('시작일을 정해주세요');
   if (e0 < s0) return toast('종료일이 시작일보다 앞이에요');
   const data = { t, start: s0, end: e0, cat: eCat || eventCatDefault() };
+  if (!applyHex(true)) return; if (eColor) data.color = eColor;
   const m = $('#eMemo').value.trim(); if (m) data.memo = m;
   state.events = state.events || [];
-  if (eEdit) { const ev = state.events.find(x => x.id === eEdit); if (ev) { delete ev.memo; Object.assign(ev, data); } }
+  if (eEdit) { const ev = state.events.find(x => x.id === eEdit); if (ev) { delete ev.memo; delete ev.color; Object.assign(ev, data); } }
   else state.events.push(Object.assign({ id: uid() }, data));
   const wasEdit = !!eEdit; eEdit = null;
   $('#dlgEvent').close(); save(); toast(wasEdit ? '일정을 수정했어요' : `${evRange(data)} 일정을 추가했어요`);
@@ -2435,6 +2514,36 @@ $('#ymPrev').onclick = () => { ymYear--; drawYM(); };
 $('#ymNext').onclick = () => { ymYear++; drawYM(); };
 $('#ymMonths').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; view = prefs.rolling ? new Date(ymYear, +b.dataset.m, 15) : new Date(ymYear, +b.dataset.m, 1); closePops(); render(); };
 $('#ymToday').onclick = () => { $('#todayBtn').click(); closePops(); };
+
+/* 카테고리 순서: 드래그로 바꾸기 (왼쪽 패널·관리 창) */
+{
+  let catDrag = null;
+  const clear = () => document.querySelectorAll('.catlist li, #cList li').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+  const idOf = li => li.dataset.cat || li.dataset.cid;
+  const sel = '.catlist li[data-cat], #cList li[data-cid]';
+  document.addEventListener('dragstart', e => {
+    const li = e.target.closest && e.target.closest(sel); if (!li || e.target.closest('input')) return;
+    e.stopPropagation(); catDrag = idOf(li); e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', catDrag); } catch {}
+  }, true);
+  document.addEventListener('dragover', e => {
+    if (!catDrag) return; const li = e.target.closest(sel); if (!li) return;
+    e.preventDefault(); clear(); const r = li.getBoundingClientRect();
+    if (idOf(li) !== catDrag) li.classList.add(e.clientY > r.top + r.height / 2 ? 'drop-after' : 'drop-before');
+  });
+  document.addEventListener('drop', e => {
+    if (!catDrag) return; const li = e.target.closest(sel); if (!li) return;
+    e.preventDefault(); e.stopPropagation();
+    const to = idOf(li), after = li.classList.contains('drop-after');
+    if (to !== catDrag) {
+      const moving = state.cats.find(c => c.id === catDrag); state.cats = state.cats.filter(c => c.id !== catDrag);
+      state.cats.splice(state.cats.findIndex(c => c.id === to) + (after ? 1 : 0), 0, moving);
+      save(); if ($('#dlgCats').open) drawCats();
+    }
+    catDrag = null; clear();
+  }, true);
+  document.addEventListener('dragend', () => { catDrag = null; clear(); });
+}
 
 /* ======================== 날짜 배경색 ======================== */
 const DAY_COLORS = ['#fde8e8','#fdeee0','#fef6d8','#f1f8dc','#e3f6ec','#e0f4f5','#e3edfd','#ebe7fd','#f6e8fb','#fce8f2','#f7efe6','#eeeeee','#fbd9d9','#fde2c8','#fcefbd','#e2f2c9','#cdeedd','#cbecf0','#d4e3fb','#ddd8fb','#eed8f7','#f9d6e7','#f0e4d6'];
@@ -2656,7 +2765,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790501309';
+const APP_BUILD = '1790517967';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
