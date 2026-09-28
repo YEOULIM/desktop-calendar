@@ -354,7 +354,7 @@ body.dragging .ev-bar{pointer-events:none}
 .catlist li:hover .cedit{opacity:1}
 .cedit:hover{background:var(--accent-soft);color:var(--ink)}
 .todo[style*="--cc"] .chk{border-color:var(--cc)}
-.todo.done .chk,.todo.done[style*="--cc"] .chk{background:var(--ink-3);border-color:var(--ink-3)}   /* 완료하면 카테고리와 상관없이 회색 */
+.todo.done .chk,.todo.done[style*="--cc"] .chk{background:var(--donec,var(--ink-3));border-color:var(--donec,var(--ink-3))}   /* 완료하면 모두 업무 카테고리 색(회색) */
 .tm{font-weight:700;color:var(--ink-2);font-size:.92em;margin-right:3px}
 .nc-time{flex:none;font-size:calc(11.5px*var(--fs));font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 5px;margin-top:2px;cursor:pointer}
 .cp-item{display:flex;align-items:center;gap:9px;width:100%;border:0;background:transparent;padding:6px 8px;border-radius:8px;text-align:left;font-size:calc(13px*var(--fs))}
@@ -1154,6 +1154,7 @@ function holidayLines(info) {
 }
 
 function render() {
+  { const w = state.cats.find(c => c.id === 'work') || state.cats[0]; document.documentElement.style.setProperty('--donec', w.color); }
   renderMini();
   $('#mNum').textContent = view.getMonth() + 1;
   $('#mYear').textContent = view.getFullYear();
@@ -2774,7 +2775,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790588378';
+const APP_BUILD = '1790588587';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
