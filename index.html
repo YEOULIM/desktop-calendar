@@ -308,6 +308,7 @@ body.dragging .ev-bar{pointer-events:none}
 .walarm{margin-left:5px}
 .walarm .wtime,.walarm .txt{color:var(--ink)}
 .biz .todo.off .txt,.biz .todo.off .wtime{color:var(--ink)}
+.biz .todo.done .txt,.biz .todo.done .wtime,.biz .todo.done .wbell{color:var(--ink-3)!important}
 .chk:disabled{opacity:.4;cursor:default}
 #side [data-sec] .add{margin-top:2px}
 
@@ -2773,7 +2774,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790587945';
+const APP_BUILD = '1790588138';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
