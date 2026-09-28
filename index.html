@@ -303,8 +303,9 @@ body.dragging .ev-bar{pointer-events:none}
 #syPw::-ms-reveal,#syPw::-ms-clear{display:none}
 
 .walarm{cursor:pointer}
-.walarm .wbell{flex:none;width:17px;height:17px;margin:1px 0 0 5px;display:grid;place-items:center;color:var(--ink-2)}
-.walarm .wbell svg{width:14px;height:14px}
+.walarm .wbell{display:inline-block;vertical-align:-2px;margin-right:4px;color:var(--ink-2)}
+.walarm .wbell svg{width:13px;height:13px}
+.walarm{margin-left:5px}
 .walarm .wtime,.walarm .txt{color:var(--ink)}
 .biz .todo.off .txt,.biz .todo.off .wtime{color:var(--ink)}
 .chk:disabled{opacity:.4;cursor:default}
@@ -1312,7 +1313,7 @@ function renderSide() {
   const bizAll = vis(state.routines).filter(r => r.panel);
   const bizDay = d.getDay() >= 1 && d.getDay() <= 5 && !krOff(d);
   const bizToday = bizAll.filter(r => ruleOn(r, d)).map(r => ({ ...r, done: !!(state.rdone[k] || {})[r.id] }));
-  const pb = progress(bizToday);
+  const pb = progress([...bizToday, ...(bizDay ? vis(state.alarms).filter(isWorkAlarm).map(a => ({ done: !!(state.rdone[k] || {})[a.id] })) : [])]);
   const dPlan = daily.filter(x => !isWorkCat(x)), dWork = daily.filter(isWorkCat);
   const rPlan = rItems.filter(x => !isWorkCat(x)), rWork = rItems.filter(isWorkCat);
   const workCat = (state.cats.find(c => c.id === 'work') || state.cats[0]).id;
@@ -1338,7 +1339,7 @@ function renderSide() {
     <div class="sec biz" data-sec="biz">
       <h3>일일 루틴 <small>${pb.txt}</small>${addBtn('biz', '일일 루틴 추가 (15:30 포장처럼 시간을 앞에 쓰면 알림)')}</h3>
       ${bizToday.length ? `<div class="prog"><b style="width:${pb.pct}%"></b></div>` : ''}
-      ${workAlarms.length ? `<ul class="todos">${workAlarms.map(a => `<li class="todo walarm${bizDay && a.on !== false ? '' : ' off'}" title="눌러서 수정" data-kind="alarm" data-rid="${a.id}"><span class="wbell">${IC.bell}</span><span class="txt"><span class="wtime">${a.time}</span> ${esc(a.t)}</span><span class="acts"><button data-rdelx title="알림 삭제" aria-label="알림 삭제">✕</button></span></li>`).join('')}</ul>` : ''}
+      ${workAlarms.length ? `<ul class="todos">${workAlarms.map(a => { const dn = !!(state.rdone[k] || {})[a.id]; return `<li class="todo walarm${dn ? ' done' : ''}${bizDay && a.on !== false ? '' : ' off'}" title="눌러서 수정" data-kind="alarm" data-rid="${a.id}" data-scope="routine" data-b="${k}" data-id="${a.id}"><button class="chk" ${bizDay ? 'data-act="toggle"' : 'disabled'} aria-label="완료 표시">${CHECK}</button><span class="txt"><span class="wbell">${IC.bell}</span><span class="wtime">${a.time}</span> ${esc(a.t)}</span><span class="acts"><button data-rdelx title="알림 삭제" aria-label="알림 삭제">✕</button></span></li>`; }).join('')}</ul>` : ''}
       ${(bizDay ? bizToday : bizAll).length ? `<ul class="todos">${(bizDay ? bizToday : bizAll).map(r => `<li class="todo${r.done ? ' done' : ''}${bizDay ? '' : ' off'}" style="--cc:${catOf(r).color}" data-scope="routine" data-b="${k}" data-id="${r.id}" data-biz="${r.id}" draggable="true" title="드래그해서 순서 바꾸기">
           <span class="grip" aria-hidden="true">⋮⋮</span><button class="chk" ${bizDay ? 'data-act="toggle"' : 'disabled'} aria-label="완료 표시">${CHECK}</button>
           <div class="tbody"><span class="txt" data-bizedit="${r.id}" title="눌러서 수정">${esc(r.t)}</span></div>
@@ -1907,11 +1908,11 @@ function playSound() {
 
 /* 알림 울리기 */
 const ringing = new Map();
-function fireAlarm(a) {
+function fireAlarm(a, late = 0) {
   if (ringing.has(a.id)) return;
   const card = document.createElement('div');
   card.className = 'alarm-card'; card.setAttribute('role', 'alert');
-  card.innerHTML = `<div class="ah"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><b>${a.time}</b> 알림</div>
+  card.innerHTML = `<div class="ah"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><b>${a.time}</b> 알림${late >= 2 ? ` <span style="font-weight:500;color:var(--ink-3)">· ${late}분 전</span>` : ''}</div>
     <p>${esc(a.t)}</p><div class="ab"><button class="btn ghost sm" data-snooze>5분 뒤 다시</button><button class="btn sm" data-ok>확인</button></div>`;
   $('#alarms').appendChild(card);
   playSound();
@@ -1933,8 +1934,9 @@ function checkAlarms() {
   const list = fired[k] = fired[k] || [];
   let changed = false;
   for (const a of alarmsOn(now)) {
+    if (isWorkAlarm(a) && (state.rdone[k] || {})[a.id]) continue;   // 먼저 끝낸 일은 울리지 않음
     const [h, m] = a.time.split(':').map(Number), am = h * 60 + m;
-    if (mins >= am && mins - am < 10 && !list.includes(a.id)) { list.push(a.id); changed = true; fireAlarm(a); }
+    if (mins >= am && mins - am < 60 && !list.includes(a.id)) { list.push(a.id); changed = true; fireAlarm(a, mins - am); }   // 바탕화면이 잠시 멈춰 있었어도 1시간 안이면 알려줌
   }
   if (changed) store.set('ync-fired', fired);
   for (let i = snoozes.length - 1; i >= 0; i--) if (Date.now() >= snoozes[i].at) { fireAlarm(snoozes[i].a); snoozes.splice(i, 1); }
@@ -2318,7 +2320,7 @@ document.addEventListener('dragend', () => document.querySelectorAll('.biz.drop-
 
 /* 왼쪽 패널에서 알림·반복 작업: 누르면 수정 */
 $('#side').addEventListener('click', e => {
-  if (e.target.closest('[data-rdelx]')) return;
+  if (e.target.closest('[data-rdelx]') || e.target.closest('[data-act]')) return;
   const li = e.target.closest('li[data-kind]'); if (!li) return;
   if (li.dataset.kind === 'alarm') openAlarm({ edit: li.dataset.rid }); else openRoutine({ edit: li.dataset.rid });
 });
@@ -2771,7 +2773,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790553174';
+const APP_BUILD = '1790587945';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
