@@ -1339,7 +1339,8 @@ function render() {
         ...info.routines.map(r => ({ t: r.t, done: !!info.rdone[r.id], color: catOf(r).color, cid: catOf(r).id, routine: true, kind: 'routine', id: r.id })),
         ...info.todos.map(t => ({ t: t.t, done: t.done, memo: t.memo, st: t.style, kind: 'todo', id: t.id, color: catOf(t).color, cid: catOf(t).id, time: t.time, tl: isWorkCat(t) ? '' : timeLabel(t) }))
       ];
-      items.sort((a, b) => (a.done && !a.routine ? 1 : 0) - (b.done && !b.routine ? 1 : 0));   // 완료한 할 일은 맨 아래로 (반복 작업은 완료해도 제자리)
+      const rank = it => (it.done && !it.routine ? 10 : 0) + ((it.kind === 'todo' || it.kind === 'routine') && it.cid && !isWorkCat({ cat: it.cid }) ? 0 : 1);
+      items.sort((a, b) => rank(a) - rank(b));   // 일정은 항상 맨 위, 완료한 할 일은 맨 아래 (반복 작업은 완료해도 제자리)
       const isPill = it => !isWide() && (it.kind === 'todo' || it.kind === 'routine') && catStyle(it.cid) === 'bar';   // 폰: '막대' 카테고리는 색 막대
       if (!isWide()) items.filter(isPill).forEach(it => { body += `<div class="pill${it.done ? ' done' : ''}${lum(it.color) > .5 ? ' dark' : ''}" style="background:${it.color}">${it.tl ? it.tl + ' ' : ''}${esc(it.t)}</div>`; });
       if (isWide()) items.forEach(it => {
@@ -2764,15 +2765,18 @@ function renderDaily() {
     h += `<div class="${cls.join(' ')}" style="grid-row:1;grid-column:${col}" data-dk="${k}" title="이 날짜 선택"><div class="dd"><b>${d.getDate()}</b><span>${DOW[w]}</span></div>${holidayLines(info).join('')}</div>`;
     // 업무 칸: 캘린더와 같은 모양 (막대 카테고리는 색 막대, 점 카테고리는 체크박스), 기간 일정은 날짜를 가로질러 막대로
     const untimed = info.todos.filter(t => !t.time);
-    const ordered = [...untimed.filter(t => !t.done), ...untimed.filter(t => t.done)];
+    const isPlanT = t => !isWorkCat(t);
+    const ordered = [...untimed.filter(t => !t.done && isPlanT(t)), ...untimed.filter(t => !t.done && !isPlanT(t)), ...untimed.filter(t => t.done)];
     let top = evNeed[i] ? `<div class="ev-sp" style="height:calc(${evNeed[i]}*(var(--barh) + 2px))"></div>` : '';
     const rtK = (state.rtime || {})[k] || {};
-    top += info.routines.filter(r => !rtK[r.id]).map(r => { const c = catOf(r).color; return `<div class="it dti routine${info.rdone[r.id] ? ' done' : ''}" draggable="true" data-dk="${k}" data-id="${r.id}" data-kind="routine" title="시간표로 끌어서 시간 정하기"><button class="chk" data-dtoggle style="border-color:${c}" aria-label="완료 표시">${CHECK}</button><svg class="bell rep" style="color:${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg><span>${esc(r.t)}</span></div>`; }).join('');
-    top += ordered.map(t => {
+    const todoHTML = t => {
       const c = catOf(t).color;
       if (catStyle(catOf(t).id) === 'bar') return `<div class="it dti pillbar${t.done ? ' done' : ''}${lum(c) > .5 ? ' dark' : ''}" style="--pc:${c}" draggable="true" data-dk="${k}" data-id="${t.id}" data-kind="todo"><span>${esc(t.t)}</span></div>`;
       return `<div class="it dti${t.done ? ' done' : ''}" draggable="true" data-dk="${k}" data-id="${t.id}" data-kind="todo" title="시간표로 끌어서 시간 정하기"><button class="chk" data-dtoggle style="border-color:${c}" aria-label="완료 표시">${CHECK}</button><span style="${t.done ? '' : itemStyle(t.style)}">${esc(t.t)}</span></div>`;
-    }).join('');
+    };
+    top += ordered.filter(t => !t.done && isPlanT(t)).map(todoHTML).join('');
+    top += info.routines.filter(r => !rtK[r.id]).map(r => { const c = catOf(r).color; return `<div class="it dti routine${info.rdone[r.id] ? ' done' : ''}" draggable="true" data-dk="${k}" data-id="${r.id}" data-kind="routine" title="시간표로 끌어서 시간 정하기"><button class="chk" data-dtoggle style="border-color:${c}" aria-label="완료 표시">${CHECK}</button><svg class="bell rep" style="color:${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="m7 22-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg><span>${esc(r.t)}</span></div>`; }).join('');
+    top += ordered.filter(t => t.done || !isPlanT(t)).map(todoHTML).join('');
     if (dAdd === k) top += `<input class="dadd" data-dk="${k}" placeholder="입력 후 Enter · 14-16 소싱" enterkeyhint="done"><div class="bin-cats" data-dcats>${binCats(dAddCat)}</div>`;
     h += `<div class="dtop" style="grid-row:2;grid-column:${col}" data-dk="${k}">${top}<button class="dplus" data-dplus="${k}" title="업무 추가 (더블클릭해도 돼요)" aria-label="업무 추가">+</button></div>`;
 
@@ -3263,7 +3267,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790810204';
+const APP_BUILD = '1790811236';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
