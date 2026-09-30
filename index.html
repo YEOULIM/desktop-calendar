@@ -1645,11 +1645,13 @@ ncBody.addEventListener('keydown', e => {
   if (!ta.classList.contains('nc-t')) return;
   const it = ta.closest('.nc-item'), L = ncItems(), i = L.indexOf(it);
   const atStart = ta.selectionStart === 0 && ta.selectionEnd === 0, atEnd = ta.selectionStart === ta.value.length;
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter') {
     e.preventDefault();
-    if (!ta.value.trim()) return;
-    if ((!it.dataset.id || card.newIds.has(it.dataset.id)) && parseQuickEvent(ta.value)) { ncCommit(true); ncDrawFixed(card.k); const nt2 = ncAddItem(null); ncFocusEnd(nt2); ncSetActive(nt2.closest('.nc-item')); return; }
-    ncCommit(); const nt = ncAddItem(null, it); ncFocusEnd(nt); ncSetActive(nt.closest('.nc-item'));
+    if (e.shiftKey) {   // Shift+Enter: 아래에 새 줄
+      if (!ta.value.trim()) return;
+      ncCommit(); const nt = ncAddItem(null, it); ncFocusEnd(nt); ncSetActive(nt.closest('.nc-item')); return;
+    }
+    return closeCard();   // Enter: 바로 저장하고 닫기
   } else if (e.key === 'Backspace' && !ta.value && L.length > 1) {
     e.preventDefault(); if (e.repeat) return; it.remove(); ncCommit(); ncSetActive(null); releaseFocus();   // 빈 줄만 지우고 윗줄로 넘어가지 않음
   } else if (e.key === 'ArrowUp' && atStart && i > 0) { e.preventDefault(); ncFocusEnd(L[i - 1].querySelector('.nc-t')); }
@@ -3267,7 +3269,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790811236';
+const APP_BUILD = '1790811448';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
