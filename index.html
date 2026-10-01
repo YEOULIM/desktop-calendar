@@ -667,7 +667,8 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
 </div>
 <div class="pop" id="timePop" role="dialog" aria-label="시간" style="width:auto">
   <h4>시간</h4>
-  <div style="display:flex;gap:6px;align-items:center"><input type="time" class="field" id="tpIn"><button class="btn sm" id="tpOk">적용</button><button class="btn ghost sm" id="tpNone">시간 없음</button></div>
+  <div class="bp-time"><input class="field" type="number" id="tpSH" min="0" max="23" placeholder="시" aria-label="시작 시">:<input class="field" type="number" id="tpSM" min="0" max="59" placeholder="분" aria-label="시작 분"><span>~</span><input class="field" type="number" id="tpEH" min="0" max="24" placeholder="시" aria-label="종료 시">:<input class="field" type="number" id="tpEM" min="0" max="59" placeholder="분" aria-label="종료 분"></div>
+  <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px"><button class="btn ghost sm" id="tpNone" type="button">시간 없음</button><button class="btn sm" id="tpOk" type="button">적용</button></div>
 </div>
 <div class="pop" id="dayPop" role="dialog" aria-label="날짜 배경색" style="width:auto">
   <h4 id="dpTitle">날짜 배경색</h4><div class="palette" id="dpColor"></div>
@@ -2391,32 +2392,6 @@ $('#spReset').onclick = () => { const item = spTarget && findItem(spTarget); if 
 $('#spClose').onclick = () => { const wasCard = card.k; closePops(); if (!wasCard) render(); };
 ['mousedown'].forEach(ev => $('#stylePop').addEventListener(ev, e => { if (!e.target.closest('input')) e.preventDefault(); }));
 
-/* 캘린더 칸의 할 일 글자를 클릭하면 그 자리에 커서가 놓여서 바로 고치기 (비우면 삭제) */
-$('#grid').addEventListener('click', e => {
-  if (!isWide() || e.target.closest('.x')) return;
-  const sp = e.target.closest('.it[data-kind="todo"] > span'); if (!sp || sp.isContentEditable) return;
-  const it = sp.closest('.it'), cell = it.closest('.cell'), k = cell.dataset.k, id = it.dataset.id;
-  const x = (state.daily[k] || []).find(t => t.id === id); if (!x) return;
-  e.stopPropagation(); e.preventDefault(); hideTip();
-  let off = x.t.length;
-  const r = document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY);
-  if (r && r.startContainer.nodeType === 3 && r.startContainer.parentNode === sp) { const i = r.startContainer.textContent.indexOf(x.t); off = Math.max(0, Math.min(x.t.length, r.startOffset - Math.max(0, i))); }
-  if (key(sel) !== k) { document.querySelectorAll('#grid .cell.sel').forEach(c => c.classList.remove('sel')); cell.classList.add('sel'); sel = parse(k); renderSide(); }
-  it.draggable = false; sp.textContent = x.t; sp.contentEditable = 'true'; sp.spellcheck = false; sp.style.outline = 'none'; sp.style.borderBottom = '1.5px solid var(--accent)';
-  sp.focus();
-  const rg = document.createRange(), sl = getSelection(); rg.setStart(sp.firstChild || sp, Math.min(off, (sp.firstChild || sp).length || 0)); rg.collapse(true); sl.removeAllRanges(); sl.addRange(rg);
-  let done = false;
-  const fin = ok => {
-    if (done) return; done = true;
-    const v = sp.textContent.replace(/\s+/g, ' ').trim();
-    if (ok) { if (v) x.t = v; else { state.daily[k] = state.daily[k].filter(t => t.id !== id); cleanup('daily', k); } save(); } else render();
-    releaseFocus();
-  };
-  sp.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.isComposing) return; if (ev.key === 'Enter') { ev.preventDefault(); fin(true); } if (ev.key === 'Escape') fin(false); });
-  sp.addEventListener('blur', () => fin(true));
-}, true);
-$('#grid').addEventListener('dblclick', e => { if (e.target.closest('[contenteditable="true"]')) e.stopPropagation(); }, true);
-
 /* 막대 누르면 기간 일정 수정 */
 $('#grid').addEventListener('click', e => { const b = e.target.closest('.ev-bar'); if (b) { e.stopPropagation(); openEvent({ edit: b.dataset.ev }); } }, true);
 $('#grid').addEventListener('dblclick', e => { if (e.target.closest('.ev-bar')) e.stopPropagation(); }, true);
@@ -2591,13 +2566,26 @@ $('#cpList').onclick = e => {
 $('#cpManage').onclick = () => { closePops(); if (card.k) closeCard(); openCats(); };
 function openTimePop(anchor, target) {
   const x = findItem(target); if (!x) return;
-  popTarget = target; $('#tpIn').value = x.time || '';
-  placePop($('#timePop'), anchor); setTimeout(() => $('#tpIn').focus(), 0);
+  popTarget = target;
+  if (x.time) {
+    const st = +x.time.slice(0, 2) * 60 + +x.time.slice(3); $('#tpSH').value = Math.floor(st / 60); $('#tpSM').value = pad(st % 60);
+    if (x.dur) { const en = Math.min(1440, st + x.dur); $('#tpEH').value = Math.floor(en / 60); $('#tpEM').value = pad(en % 60); } else { $('#tpEH').value = ''; $('#tpEM').value = ''; }
+  } else ['#tpSH', '#tpSM', '#tpEH', '#tpEM'].forEach(id => $(id).value = '');
+  placePop($('#timePop'), anchor); setTimeout(() => $('#tpSH').focus(), 0);
 }
-function applyTime(v) { const x = popTarget && findItem(popTarget); if (!x) return; if (v) x.time = v; else delete x.time; persistTarget(); closePops(); }
-$('#tpOk').onclick = () => applyTime($('#tpIn').value);
-$('#tpNone').onclick = () => applyTime('');
-$('#tpIn').addEventListener('keydown', e => { if (e.key === 'Enter') applyTime($('#tpIn').value); if (e.key === 'Escape') closePops(); });
+function applyTime(clear) {
+  const x = popTarget && findItem(popTarget); if (!x) return;
+  const sh = $('#tpSH').value.trim();
+  if (clear || sh === '') { delete x.time; delete x.dur; persistTarget(); return closePops(); }
+  const st = Math.min(23, Math.max(0, +sh)) * 60 + Math.min(59, Math.max(0, +$('#tpSM').value || 0));
+  x.time = tHM(st);
+  const eh = $('#tpEH').value.trim();
+  if (eh !== '') { const en = Math.min(24, Math.max(0, +eh)) * 60 + Math.min(59, Math.max(0, +$('#tpEM').value || 0)); if (en <= st) return toast('끝나는 시간이 시작보다 늦어야 해요'); x.dur = en - st; } else delete x.dur;
+  persistTarget(); closePops();
+}
+$('#tpOk').onclick = () => applyTime(false);
+$('#tpNone').onclick = () => applyTime(true);
+['#tpSH', '#tpSM', '#tpEH', '#tpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyTime(false); } if (e.key === 'Escape') closePops(); }));
 
 let newCatColor = CAT_COLORS[6], ccTarget = null;
 function catCount(id) {
@@ -3269,7 +3257,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790811448';
+const APP_BUILD = '1790845911';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
