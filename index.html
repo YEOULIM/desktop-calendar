@@ -656,6 +656,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
   <h4>시간 블록</h4>
   <input class="field" id="bpTitle" placeholder="업무 내용">
   <div id="bpCatWrap"><h4 style="margin-top:10px">카테고리</h4><div class="row2" id="bpCats"></div></div>
+  <div id="bpDateWrap"><h4 style="margin-top:10px">날짜</h4><input class="field" id="bpDate" placeholder="10/7" style="width:110px!important" aria-label="날짜"></div>
   <h4 style="margin-top:10px">시간</h4>
   <div class="bp-time"><input class="field" type="number" id="bpSH" min="0" max="24" aria-label="시작 시">:<input class="field" type="number" id="bpSM" min="0" max="59" step="5" aria-label="시작 분"><span>~</span><input class="field" type="number" id="bpEH" min="0" max="24" aria-label="종료 시">:<input class="field" type="number" id="bpEM" min="0" max="59" step="5" aria-label="종료 분"></div>
   <h4 style="margin-top:10px">메모</h4><textarea class="field" id="bpMemo" rows="2" placeholder="메모 (선택)" style="resize:vertical;min-height:0;font-family:inherit;font-size:13px"></textarea>
@@ -665,7 +666,8 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
   <h4>카테고리</h4><div id="cpList"></div>
   <button class="btn ghost sm" id="cpManage" style="margin-top:6px;width:100%">카테고리 추가·수정</button>
 </div>
-<div class="pop" id="timePop" role="dialog" aria-label="시간" style="width:auto">
+<div class="pop" id="timePop" role="dialog" aria-label="날짜·시간" style="width:auto">
+  <h4>날짜</h4><input class="field" id="tpDate" placeholder="10/7" style="width:110px;margin-bottom:8px" aria-label="날짜">
   <h4>시간</h4>
   <div class="bp-time"><input class="field" type="number" id="tpSH" min="0" max="23" placeholder="시" aria-label="시작 시">:<input class="field" type="number" id="tpSM" min="0" max="59" placeholder="분" aria-label="시작 분"><span>~</span><input class="field" type="number" id="tpEH" min="0" max="24" placeholder="시" aria-label="종료 시">:<input class="field" type="number" id="tpEM" min="0" max="59" placeholder="분" aria-label="종료 분"></div>
   <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px"><button class="btn ghost sm" id="tpNone" type="button">시간 없음</button><button class="btn sm" id="tpOk" type="button">적용</button></div>
@@ -1560,7 +1562,7 @@ $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key ==
 /* 더블클릭: 날짜 카드에서 바로 입력·수정 */
 const card = { k: null, timer: null, newIds: new Set() };
 const ncBody = $('#ncBody');
-$('#ncFoot').innerHTML = `<button data-nc="done" title="완료 표시">${IC.done}</button><button data-nc="style" title="글자 색·글꼴·크기">${IC.style}</button><button data-nc="cat" title="카테고리">${IC.tag}</button><button data-nc="time" title="시간">${IC.clock}</button><button data-nc="repeat" title="반복 작업으로 등록">${IC.repeat}</button>`
+$('#ncFoot').innerHTML = `<button data-nc="done" title="완료 표시">${IC.done}</button><button data-nc="style" title="글자 색·글꼴·크기">${IC.style}</button><button data-nc="cat" title="카테고리">${IC.tag}</button><button data-nc="time" title="날짜·시간 바꾸기">${IC.clock}</button><button data-nc="repeat" title="반복 작업으로 등록">${IC.repeat}</button>`
   + `<button data-nc="alarm" title="알림 추가">${IC.bell}</button><button data-nc="memo" title="메모 추가">${IC.note}</button><span class="nc-hint" id="ncHint"></span>`;
 const growEl = el => { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
 function ncAddItem(t, after) {
@@ -1836,7 +1838,7 @@ function openEditor(li, item, list, scope, b, focusOn) {
   const acts = document.createElement('div'); acts.className = 'ed-acts';
   acts.innerHTML = `<button data-ed="done" title="${item.done ? '완료 취소' : '완료 표시'}">${IC.done}</button>`
     + (scope === 'daily' ? `<button data-ed="repeat" title="반복 작업으로 등록">${IC.repeat}</button>` : '')
-    + `<button data-ed="alarm" title="알림 추가">${IC.bell}</button><button data-ed="memo" title="메모">${IC.note}</button><button data-ed="style" title="글자 색·글꼴·크기">${IC.style}</button><button data-ed="cat" title="카테고리">${IC.tag}</button><button data-ed="time" title="시간">${IC.clock}</button>`;
+    + `<button data-ed="alarm" title="알림 추가">${IC.bell}</button><button data-ed="memo" title="메모">${IC.note}</button><button data-ed="style" title="글자 색·글꼴·크기">${IC.style}</button><button data-ed="cat" title="카테고리">${IC.tag}</button><button data-ed="time" title="날짜·시간 바꾸기">${IC.clock}</button>`;
   body.append(inp, ta, acts);
   const grow = el => { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
   [inp, ta].forEach(el => { el.addEventListener('input', () => grow(el)); grow(el); });
@@ -2601,6 +2603,18 @@ $('#cpList').onclick = e => {
   persistTarget(); closePops();
 };
 $('#cpManage').onclick = () => { closePops(); if (card.k) closeCard(); openCats(); };
+// 할 일을 다른 날짜로 옮기기 (바탕화면에서도 되게 글자로 입력: 10/7, 2026/10/7, 10.7)
+function moveToDate(target, txt) {
+  const v = String(txt || '').trim(); if (!v || target.scope !== 'daily') return target;
+  const r = parseDateTxt(v, parse(target.b).getFullYear()); if (!r) { toast('날짜는 10/7 처럼 써주세요'); return null; }
+  if (r.k === target.b) return target;
+  const L = state.daily[target.b] || [], x = L.find(t => t.id === target.id); if (!x) return target;
+  if (card.k === target.b) { const el = ncBody.querySelector(`.nc-item[data-id="${x.id}"]`); if (el) el.remove(); }
+  state.daily[target.b] = L.filter(t => t.id !== x.id); cleanup('daily', target.b);
+  delete x.from; bucketOf('daily', r.k).push(x);
+  const d = parse(r.k); toast(`${d.getMonth() + 1}월 ${d.getDate()}일로 옮겼어요`);
+  return { scope: 'daily', b: r.k, id: x.id };
+}
 function openTimePop(anchor, target) {
   const x = findItem(target); if (!x) return;
   popTarget = target;
@@ -2608,10 +2622,15 @@ function openTimePop(anchor, target) {
     const st = +x.time.slice(0, 2) * 60 + +x.time.slice(3); $('#tpSH').value = Math.floor(st / 60); $('#tpSM').value = pad(st % 60);
     if (x.dur) { const en = Math.min(1440, st + x.dur); $('#tpEH').value = Math.floor(en / 60); $('#tpEM').value = pad(en % 60); } else { $('#tpEH').value = ''; $('#tpEM').value = ''; }
   } else ['#tpSH', '#tpSM', '#tpEH', '#tpEM'].forEach(id => $(id).value = '');
+  $('#tpDate').value = target.scope === 'daily' ? fmtMD(target.b) : ''; $('#tpDate').disabled = target.scope !== 'daily';
   placePop($('#timePop'), anchor); setTimeout(() => $('#tpSH').focus(), 0);
 }
 function applyTime(clear) {
-  const x = popTarget && findItem(popTarget); if (!x) return;
+  if (!popTarget || !findItem(popTarget)) return;
+  const nt = moveToDate(popTarget, $('#tpDate').value); if (!nt) return;
+  const moved = nt.b !== popTarget.b; popTarget = nt;
+  const x = findItem(popTarget); if (!x) return;
+  if (moved && card.k) { const k = card.k; closePops(); card.k = null; $('#card').classList.remove('on'); save(); }
   const sh = $('#tpSH').value.trim();
   if (clear || sh === '') { delete x.time; delete x.dur; persistTarget(); return closePops(); }
   const st = Math.min(23, Math.max(0, +sh)) * 60 + Math.min(59, Math.max(0, +$('#tpSM').value || 0));
@@ -2622,7 +2641,7 @@ function applyTime(clear) {
 }
 $('#tpOk').onclick = () => applyTime(false);
 $('#tpNone').onclick = () => applyTime(true);
-['#tpSH', '#tpSM', '#tpEH', '#tpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyTime(false); } if (e.key === 'Escape') closePops(); }));
+['#tpDate', '#tpSH', '#tpSM', '#tpEH', '#tpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyTime(false); } if (e.key === 'Escape') closePops(); }));
 
 let newCatColor = CAT_COLORS[6], ccTarget = null;
 function catCount(id) {
@@ -2930,7 +2949,7 @@ function openBlockPop(anchor, k, id, kind = 'todo') {
   const st = hm2m(x.time), en = Math.min(1440, st + (x.dur || 30));
   bpT = { k, id, kind, cat: catOf(x).id };
   $('#bpTitle').value = x.t; $('#bpTitle').disabled = kind === 'routine';
-  $('#bpCatWrap').classList.toggle('hidden', kind === 'routine');
+  $('#bpCatWrap').classList.toggle('hidden', kind === 'routine'); $('#bpDateWrap').classList.toggle('hidden', kind === 'routine'); $('#bpDate').value = fmtMD(k);
   $('#bpCats').innerHTML = catChips(bpT.cat);
   $('#bpMemo').value = x.memo || '';
   setBpTimes(st, en);
@@ -2955,12 +2974,14 @@ const bpItem = () => bpT && (state.daily[bpT.k] || []).find(t => t.id === bpT.id
 $('#bpSave').onclick = () => {
   const { st, en } = readBp(); if (en <= st) return toast('끝나는 시간이 시작보다 늦어야 해요');
   if (bpT && bpT.kind === 'routine') { const v = ((state.rtime || {})[bpT.k] || {})[bpT.id]; if (v) { v.time = tHM(st); v.dur = en - st; const mm = $('#bpMemo').value.trim(); if (mm) v.memo = mm; else delete v.memo; } closePops(); return save(); }
+  const nt = moveToDate({ scope: 'daily', b: bpT.k, id: bpT.id }, $('#bpDate').value); if (!nt) return;
+  bpT.k = nt.b;
   const x = bpItem(); if (!x) return; const v = $('#bpTitle').value.trim(); if (v) x.t = v;
   x.time = tHM(st); x.dur = en - st; x.cat = bpT.cat;
   const mm = $('#bpMemo').value.trim(); if (mm) x.memo = mm; else delete x.memo;
   closePops(); save();
 };
-['#bpTitle', '#bpSH', '#bpSM', '#bpEH', '#bpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#bpSave').click(); } }));
+['#bpTitle', '#bpDate', '#bpSH', '#bpSM', '#bpEH', '#bpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#bpSave').click(); } }));
 $('#bpDone').onclick = () => {
   if (bpT && bpT.kind === 'routine') { const m = (state.rdone[bpT.k] = state.rdone[bpT.k] || {}); if (m[bpT.id]) delete m[bpT.id]; else m[bpT.id] = 1; closePops(); return save(); }
   const x = bpItem(); if (!x) return; x.done = !x.done; closePops(); save(); };
@@ -3294,7 +3315,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1791266249';
+const APP_BUILD = '1791271465';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
