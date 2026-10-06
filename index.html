@@ -1004,7 +1004,7 @@ function fetchCN(year) {
 
 /* ======================== 상태 ======================== */
 const DEF_CATS = [{ id: 'work', name: '업무', color: '#2b7a6f', on: true }, { id: 'plan', name: '일정', color: '#3566d4', on: true }];
-const DEF_STATE = { v: 5, rtime: {}, cats: [], events: [], dayColor: {}, updatedAt: 0, daily: {}, weekly: {}, monthly: {}, routines: [], rdone: {}, customHol: [], alarms: [] };
+const DEF_STATE = { v: 5, del: {}, rtime: {}, cats: [], events: [], dayColor: {}, updatedAt: 0, daily: {}, weekly: {}, monthly: {}, routines: [], rdone: {}, customHol: [], alarms: [] };
 const DEF_PREFS = { weekStart: 0, theme: 'auto', lunar: true, kr: true, cn: true, cnWork: true, showAlarm: true, showMemo: true, carry: true, cardW: 300, cardH: 340, glass: 0.74, wall: 'mist',
   widget: false, ww: 1180, wh: 700, wx: 60, wy: 60, side: 300, sideLeft: true, collapsed: false,
   font: 'pretendard', fw: 400, fs: 1, fsD: 1, rolling: true, viewMode: 'cal', dayS: 8, dayE: 22, colors: {}, sound: 'chime', vol: 0.7 };
@@ -1130,7 +1130,24 @@ let view = goMonth(new Date());
 let sel = new Date();
 let todayK = key(new Date());
 
+function collectIds(st) {
+  const ids = new Set();
+  ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(st[sc] || {}).forEach(L => L.forEach(x => ids.add(x.id))));
+  ['routines', 'alarms', 'events'].forEach(f => (st[f] || []).forEach(x => ids.add(x.id)));
+  return ids;
+}
+let idsOf = null, idsSet = null;
+function trackDeletes() {
+  const now = collectIds(state);
+  if (idsOf === state && idsSet) {   // 같은 데이터에서 사라진 항목 = 내가 지운 것
+    state.del = state.del || {};
+    idsSet.forEach(id => { if (!now.has(id)) state.del[id] = Date.now(); });
+    const cut = Date.now() - 90 * 864e5; Object.keys(state.del).forEach(id => { if (state.del[id] < cut) delete state.del[id]; });
+  }
+  idsOf = state; idsSet = now;
+}
 function save() {
+  trackDeletes();
   state.updatedAt = Date.now();
   store.set('ync-data', state);
   Sync.push();
@@ -1155,6 +1172,7 @@ function carryOver() {
 }
 function runCarry() {
   if (!prefs.carry) return;
+  if (Sync.cfg && !Sync.firstDone) return;   // 로그인한 기기는 클라우드 내용을 먼저 받아온 다음에
   const n = carryOver();
   if (n) { save(); toast(`완료하지 않은 할 일 ${n}개를 오늘로 옮겼어요`); }
 }
@@ -2241,11 +2259,28 @@ function mergeStates(a, b) {
   const [newer, older] = (a.updatedAt || 0) >= (b.updatedAt || 0) ? [a, b] : [b, a];
   const out = normalize(JSON.parse(JSON.stringify(newer)));
   const o = normalize(JSON.parse(JSON.stringify(older)));
-  const ids = new Set(); ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(out[sc]).forEach(L => L.forEach(x => ids.add(x.id))));
-  ['daily', 'weekly', 'monthly'].forEach(sc => Object.entries(o[sc]).forEach(([k, L]) => L.forEach(x => { if (!ids.has(x.id)) { (out[sc][k] = out[sc][k] || []).push(x); ids.add(x.id); } })));
-  ['routines', 'alarms', 'events', 'cats'].forEach(f => { const have = new Set((out[f] || []).map(x => x.id)); (o[f] || []).forEach(x => { if (!have.has(x.id)) out[f].push(x); }); });
+  out.del = Object.assign({}, o.del, out.del);
+  const dead = id => !!out.del[id];
+  const SC = ['daily', 'weekly', 'monthly'];
+  // 지운 항목 정리
+  SC.forEach(sc => Object.keys(out[sc]).forEach(k => { out[sc][k] = out[sc][k].filter(x => !dead(x.id)); if (!out[sc][k].length) delete out[sc][k]; }));
+  ['routines', 'alarms', 'events'].forEach(f => { out[f] = (out[f] || []).filter(x => !dead(x.id)); });
+  // 위치 찾기
+  const where = new Map();
+  SC.forEach(sc => Object.entries(out[sc]).forEach(([k, L]) => L.forEach(x => where.set(x.id, { sc, k, x }))));
+  SC.forEach(sc => Object.entries(o[sc]).forEach(([k, L]) => L.forEach(x => {
+    if (dead(x.id)) return;
+    const w = where.get(x.id);
+    if (!w) { (out[sc][k] = out[sc][k] || []).push(x); where.set(x.id, { sc, k, x }); return; }
+    if (x.done && !w.x.done) {   // 한쪽에서 완료한 건 완료로 (미루기로 옮겨진 쪽보다 우선)
+      out[w.sc][w.k] = out[w.sc][w.k].filter(y => y.id !== x.id); if (!out[w.sc][w.k].length) delete out[w.sc][w.k];
+      (out[sc][k] = out[sc][k] || []).push(x); where.set(x.id, { sc, k, x });
+    }
+  })));
+  ['routines', 'alarms', 'events', 'cats'].forEach(f => { const have = new Set((out[f] || []).map(x => x.id)); (o[f] || []).forEach(x => { if (!have.has(x.id) && !dead(x.id)) out[f].push(x); }); });
   const hk = new Set(out.customHol.map(h => h.date + '|' + h.name)); o.customHol.forEach(h => { if (!hk.has(h.date + '|' + h.name)) out.customHol.push(h); });
   Object.entries(o.rdone).forEach(([k, m]) => { out.rdone[k] = Object.assign({}, m, out.rdone[k]); });
+  out.rtime = Object.assign({}, o.rtime, out.rtime);
   out.dayColor = Object.assign({}, o.dayColor, out.dayColor);
   return out;
 }
@@ -2275,16 +2310,16 @@ const Sync = {
       if (!firebase.apps.length) firebase.initializeApp(this.cfg);
       this.auth = firebase.auth(); this.db = firebase.firestore(); this.ready = true;
       this.auth.onAuthStateChanged(u => this.onUser(u));
-    } catch (e) { this.status('error', '연결 실패'); this.msg('Firebase를 불러오지 못했어요. 인터넷 연결을 확인하세요.'); }
+    } catch (e) { this.firstDone = true; runCarry(); this.status('error', '연결 실패'); this.msg('Firebase를 불러오지 못했어요. 인터넷 연결을 확인하세요.'); }
   },
   onUser(u) {
     this.user = u; if (this.unsub) { this.unsub(); this.unsub = null; }
     this.drawSettings();
-    if (!u) return this.status('local', '로그인 필요');
+    if (!u) { this.firstDone = true; runCarry(); return this.status('local', '로그인 필요'); }
     this.ref = this.db.collection('users').doc(u.uid).collection('desk').doc('main');
     let first = true;
     this.unsub = this.ref.onSnapshot(snap => {
-      if (!snap.exists) { first = false; this.pushNow(); return; }
+      if (!snap.exists) { first = false; this.firstDone = true; runCarry(); this.pushNow(); return; }
       const d = snap.data(); let remote;
       try { remote = JSON.parse(d.json); } catch { return; }
       if (first) {   // 접속할 때는 덮어쓰지 않고 두 쪽 내용을 합침
@@ -2295,7 +2330,8 @@ const Sync = {
           state = mergeStates(state, normalize(remote)); state.updatedAt = Date.now();
           store.set('ync-data', state); render(); this.pushNow();
         }
-      } else if ((remote.updatedAt || 0) > state.updatedAt) { state = normalize(remote); store.set('ync-data', state); render(); }
+        this.firstDone = true; runCarry();
+      } else if ((remote.updatedAt || 0) > state.updatedAt) { state = mergeStates(state, normalize(remote)); state.updatedAt = remote.updatedAt; store.set('ync-data', state); render(); }
       else if ((remote.updatedAt || 0) < state.updatedAt) this.push();
       if (!snap.metadata.hasPendingWrites) this.status('synced', '동기화됨');
     }, err => { this.status('error', '동기화 오류'); this.msg(err.message); });
@@ -2303,6 +2339,7 @@ const Sync = {
   push() { if (!this.user) return; clearTimeout(this.timer); this.status('busy', '저장 중'); this.timer = setTimeout(() => this.pushNow(), 700); },
   pushNow() {
     if (!this.ref) return;
+    trackDeletes();
     this.ref.set({ json: JSON.stringify(state), updatedAt: state.updatedAt })
       .then(() => this.status('synced', '동기화됨'))
       .catch(e => { this.status('error', '동기화 오류'); this.msg(e.message); });
@@ -3257,7 +3294,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1790845911';
+const APP_BUILD = '1791266249';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
@@ -3301,6 +3338,7 @@ if (!state.bizMoved) {
   state.bizMoved = true; if (n) store.set('ync-data', state);
 }
 applyPrefs(); render(); runCarry(); Sync.init();
+setTimeout(() => { if (!Sync.firstDone && !Sync.user) { Sync.firstDone = true; runCarry(); } }, 8000);
 if (document.fonts) document.fonts.ready.then(() => render());
 setInterval(() => {
   const k = key(new Date());
