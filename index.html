@@ -349,7 +349,7 @@ body.dragging .ev-bar{pointer-events:none}
 .vtabs button{border:0;background:transparent;padding:5px 16px;border-radius:9px;font-weight:700;font-size:calc(13px*var(--fs));color:var(--ink-3)}
 .vtabs button:hover{color:var(--ink)}
 .vtabs button[aria-selected="true"]{background:rgb(var(--glass-rgb));color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.daily{flex:1;min-height:0;display:grid;grid-template-columns:46px repeat(7,minmax(0,1fr));grid-template-rows:auto auto minmax(0,1fr);padding:0 10px 10px;position:relative}
+.daily{flex:1;min-height:0;display:grid;grid-template-columns:58px repeat(7,minmax(0,1fr));grid-template-rows:auto auto minmax(0,1fr);padding:0 10px 10px;position:relative}
 .dh{padding:6px 7px 5px;border-bottom:1px solid var(--line);cursor:pointer;min-width:0}
 .dh .dd{display:flex;align-items:baseline;gap:5px}
 .dh .dd b{font-size:calc(15px*var(--fs-d));font-weight:700}
@@ -385,7 +385,7 @@ body.dragging .ev-bar{pointer-events:none}
 .blk.short b{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .blk.short small{display:inline;flex:none}
 .blk.has-memo{padding-right:18px}
-.bmemo{position:absolute;right:3px;top:2px;width:14px;height:14px;color:var(--ink-2);cursor:help}
+.bmemo{position:absolute;right:3px;top:2px;width:14px;height:14px;color:var(--ink-2);cursor:default}
 .bmemo svg{width:14px;height:14px}
 .bin-wrap{position:absolute;left:2px;right:2px;z-index:4}
 .bin-wrap .bin{position:static;width:100%;display:block}
@@ -401,6 +401,10 @@ body.dragging .ev-bar{pointer-events:none}
 .blk.done b{text-decoration:line-through}
 .blk:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:2}
 .bin{position:absolute;left:2px;right:2px;z-index:4;border:1.5px solid var(--accent);border-radius:6px;background:rgb(var(--glass-rgb) / .97);font-size:calc(11.5px*var(--fs));padding:2px 5px;outline:none}
+.tbell,.cbell{position:absolute;transform:translateY(-50%);width:15px;height:15px;display:grid;place-items:center;font-size:11px;line-height:1;font-style:normal;cursor:default;z-index:5}
+.tbell{left:2px}
+.cbell{right:3px;background:rgb(var(--glass-rgb) / .95);border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.tbell svg,.cbell svg{width:12px;height:12px}
 .balarm{position:absolute;left:3px;transform:translateY(-50%);font-size:calc(10px*var(--fs));color:var(--ink-2);background:rgb(var(--glass-rgb) / .9);border-radius:5px;padding:0 4px;pointer-events:none;white-space:nowrap;z-index:0}
 .nowline{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--kr);z-index:3;pointer-events:none}
 .nowline::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--kr)}
@@ -2797,7 +2801,7 @@ function renderDaily() {
   if (!d3) d3 = new Date();
   const nDays = isWide() ? 7 : 3, start0 = isWide() ? dWeek : new Date(d3.getFullYear(), d3.getMonth(), d3.getDate());
   const days = Array.from({ length: nDays }, (_, i) => addDays(start0, i));
-  $('#daily').style.gridTemplateColumns = `46px repeat(${nDays},minmax(0,1fr))`;
+  $('#daily').style.gridTemplateColumns = `58px repeat(${nDays},minmax(0,1fr))`;
   $('#mNum').textContent = days[0].getMonth() + 1; $('#mYear').textContent = days[0].getFullYear();
   const S = prefs.dayS * 60, E = prefs.dayE * 60, total = E - S, slots = total / 30, pct = m => (m - S) / total * 100;
   const selK = key(sel);
@@ -2809,6 +2813,9 @@ function renderDaily() {
   const laneE = []; segs.forEach(g => { let L = laneE.findIndex(x => x < g.c0); if (L < 0) { L = laneE.length; laneE.push(-1); } laneE[L] = g.c1; g.lane = L; for (let x = g.c0; x <= g.c1; x++) evNeed[x] = Math.max(evNeed[x], L + 1); });
   segs.forEach(g => { const c = g.e.color || catOf(g.e).color; h += `<div class="ev-bar${g.e.start < k0 ? ' cl' : ''}${g.e.end > kN ? ' cr' : ''}${lum(c) > .5 ? ' dark' : ''}" data-evid="${g.e.id}" title="${esc(evRange(g.e) + ' ' + g.e.t)}" style="grid-row:2;grid-column:${g.c0 + 2}/${g.c1 + 3};margin-top:calc(6px + ${g.lane}*(var(--barh) + 2px));background:${c}">${esc(g.e.t)}</div>`; });
   let times = ''; for (let m = S; m <= E; m += 60) times += `<span style="top:${pct(m)}%">${m === 1440 ? '24:00' : m2hm(m)}</span>`;
+  const fixed = {};
+  vis(state.alarms).filter(a => a.on !== false && a.freq !== 'once').forEach(a => { const m = hm2m(a.time); if (m >= S && m <= E) (fixed[m] = fixed[m] || []).push(a); });
+  Object.entries(fixed).forEach(([m, L]) => { times += `<i class="tbell" style="top:${pct(+m)}%" data-tip="${esc(L.map(a => `${a.time} ${a.t}`).join('\n'))}">🔔</i>`; });
   h += `<div class="dtimes" style="grid-row:3;grid-column:1">${times}</div>`;
   days.forEach((d, i) => {
     const k = key(d), info = dayInfo(d), col = i + 2, w = d.getDay();
@@ -2844,7 +2851,7 @@ function renderDaily() {
       const short = (Math.min(x.en, E) - Math.max(x.st, S)) < 60, memo = x.t.memo ? `<i class="bmemo" data-memo="${esc(x.t.memo)}" data-t="${esc(x.t.t)}">${IC.note}</i>` : '';
       return `<div class="blk${x.t.done ? ' done' : ''}${short ? ' short' : ''}${memo ? ' has-memo' : ''}" data-dk="${k}" data-id="${x.t.id}" data-kind="${x.t.kind || 'todo'}" style="top:${top}%;height:calc(${ht}% - 2px);left:calc(${x.lane * wdt}% + 2px);width:calc(${wdt}% - 4px);--bc:${x.t.bg ? shadeHex(bg, -.25) : c};--bcs:${bg}${lum(bg) > .6 ? '66' : '1a'};color:var(--ink)" title="${esc(x.t.t)} · ${x.t.time}~${m2hm(Math.min(x.en, 1440))}"><b>${x.t.kind === 'routine' ? '↻ ' : ''}${esc(x.t.t)}</b>${short ? '' : `<small>${x.t.time}~${m2hm(Math.min(x.en, 1440))}</small>`}${memo}</div>`;
     }).join('');
-    blocks += alarmsShown(d).filter(a => { const m = hm2m(a.time); return m >= S && m <= E; }).map(a => `<span class="balarm" style="top:${pct(hm2m(a.time))}%">🔔 ${a.time} ${esc(a.t)}</span>`).join('');
+    blocks += alarmsShown(d).filter(a => { const m = hm2m(a.time); return a.freq === 'once' && m >= S && m <= E; }).map(a => `<i class="cbell" style="top:${pct(hm2m(a.time))}%" data-tip="${esc(a.time + ' ' + a.t)}">🔔</i>`).join('');
     if (k === todayK) { const n = new Date(), nm = n.getHours() * 60 + n.getMinutes(); if (nm >= S && nm <= E) blocks += `<i class="nowline" style="top:${pct(nm)}%"></i>`; }
     h += `<div class="dcol" style="grid-row:3;grid-column:${col};--slots:${slots}" data-dk="${k}">${blocks}</div>`;
   });
@@ -2879,7 +2886,7 @@ dailyEl.addEventListener('click', e => {
     sel0.box.textContent = `${tHM(a)}~${tHM(b)}`;
   };
   dailyEl.addEventListener('pointerdown', e => {
-    const col = e.target.closest('.dcol'); if (!col || e.target.closest('.blk, .bin-wrap, .bmemo') || e.button !== 0) return;
+    const col = e.target.closest('.dcol'); if (!col || e.target.closest('.blk, .bin-wrap, .bmemo, .cbell') || e.button !== 0) return;
     e.preventDefault();
     const m = slotAt(col, e.clientY);
     // 입력칸이 비어 있을 때 같은 날 아래 칸을 한 번 더 클릭하면 → 그 칸까지 범위가 늘어남 (바탕화면에서 드래그 대신)
@@ -3011,9 +3018,9 @@ $('#bpDel').onclick = () => {
   const k = bpT.k; state.daily[k] = (state.daily[k] || []).filter(t => t.id !== bpT.id); cleanup('daily', k); closePops(); save();
 };
 dailyEl.addEventListener('mouseover', e => {
-  const ic = e.target.closest('.bmemo'); if (!ic) return hideTip();
+  const ic = e.target.closest('.bmemo, .tbell, .cbell'); if (!ic) return hideTip();
   const tip = $('#tip'); tip.classList.add('memo-only');
-  tip.querySelector('p').textContent = ic.dataset.memo; tip.classList.add('on');
+  tip.querySelector('p').textContent = ic.dataset.memo || ic.dataset.tip; tip.classList.add('on');
   const r = ic.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
   let x = r.right + 6, y = r.top; if (x + w > innerWidth - 8) x = r.left - w - 6; if (y + h > innerHeight - 8) y = innerHeight - h - 8;
   tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
@@ -3334,7 +3341,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1791415103';
+const APP_BUILD = '1791415683';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
