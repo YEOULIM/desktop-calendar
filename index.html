@@ -1149,15 +1149,28 @@ function collectIds(st) {
   ['routines', 'alarms', 'events'].forEach(f => (st[f] || []).forEach(x => ids.add(x.id)));
   return ids;
 }
-let idsOf = null, idsSet = null;
+// 바뀐 항목마다 수정 시각(u)을 붙이고, 지운 항목·체크 해제도 기록 → 기기끼리 합칠 때 '나중에 바꾼 쪽'이 이김
+const itemSig = x => { const { u, ...r } = x; return JSON.stringify(r); };
+function allItems(st) {
+  const L = [];
+  ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(st[sc] || {}).forEach(A => A.forEach(x => L.push(x))));
+  ['routines', 'alarms', 'events'].forEach(f => (st[f] || []).forEach(x => L.push(x)));
+  return L;
+}
+function rdoneKeys(st) { const S = new Set(); Object.entries(st.rdone || {}).forEach(([k, m]) => Object.keys(m).forEach(id => S.add(k + '|' + id))); return S; }
+let idsOf = null, sigMap = null, rdSet = null;
 function trackDeletes() {
-  const now = collectIds(state);
-  if (idsOf === state && idsSet) {   // 같은 데이터에서 사라진 항목 = 내가 지운 것
-    state.del = state.del || {};
-    idsSet.forEach(id => { if (!now.has(id)) state.del[id] = Date.now(); });
-    const cut = Date.now() - 90 * 864e5; Object.keys(state.del).forEach(id => { if (state.del[id] < cut) delete state.del[id]; });
+  const items = allItems(state), now = new Map(items.map(x => [x.id, x])), rd = rdoneKeys(state), t = Date.now();
+  if (idsOf === state && sigMap) {
+    state.del = state.del || {}; state.rdel = state.rdel || {};
+    sigMap.forEach((sig, id) => { if (!now.has(id)) state.del[id] = t; });
+    items.forEach(x => { const sig = itemSig(x); if (sigMap.get(x.id) !== sig) x.u = t; });
+    rdSet.forEach(key => { if (!rd.has(key)) state.rdel[key] = t; });
+    rd.forEach(key => { if (!rdSet.has(key)) { const [k, id] = key.split('|'); state.rdone[k][id] = t; delete state.rdel[key]; } });
+    const cut = t - 90 * 864e5;
+    ['del', 'rdel'].forEach(f => Object.keys(state[f]).forEach(id => { if (state[f][id] < cut) delete state[f][id]; }));
   }
-  idsOf = state; idsSet = now;
+  idsOf = state; sigMap = new Map(items.map(x => [x.id, itemSig(x)])); rdSet = rd;
 }
 function save() {
   trackDeletes();
@@ -2285,14 +2298,19 @@ function mergeStates(a, b) {
     if (dead(x.id)) return;
     const w = where.get(x.id);
     if (!w) { (out[sc][k] = out[sc][k] || []).push(x); where.set(x.id, { sc, k, x }); return; }
-    if (x.done && !w.x.done) {   // 한쪽에서 완료한 건 완료로 (미루기로 옮겨진 쪽보다 우선)
+    const xu = x.u || 0, wu = w.x.u || 0;
+    if (xu > wu || (!xu && !wu && x.done && !w.x.done)) {   // 나중에 바꾼 쪽 우선 (기록이 없으면 완료 쪽)
       out[w.sc][w.k] = out[w.sc][w.k].filter(y => y.id !== x.id); if (!out[w.sc][w.k].length) delete out[w.sc][w.k];
       (out[sc][k] = out[sc][k] || []).push(x); where.set(x.id, { sc, k, x });
     }
   })));
-  ['routines', 'alarms', 'events', 'cats'].forEach(f => { const have = new Set((out[f] || []).map(x => x.id)); (o[f] || []).forEach(x => { if (!have.has(x.id) && !dead(x.id)) out[f].push(x); }); });
+  ['routines', 'alarms', 'events', 'cats'].forEach(f => { (o[f] || []).forEach(x => { if (dead(x.id)) return; const i = out[f].findIndex(y => y.id === x.id); if (i < 0) out[f].push(x); else if ((x.u || 0) > (out[f][i].u || 0)) out[f][i] = x; }); });
   const hk = new Set(out.customHol.map(h => h.date + '|' + h.name)); o.customHol.forEach(h => { if (!hk.has(h.date + '|' + h.name)) out.customHol.push(h); });
-  Object.entries(o.rdone).forEach(([k, m]) => { out.rdone[k] = Object.assign({}, m, out.rdone[k]); });
+  // 반복 작업 체크: 체크한 시각 vs 해제한 시각 중 나중 것
+  const rdel = {}; [o.rdel || {}, out.rdel || {}].forEach(m => Object.entries(m).forEach(([key, t]) => rdel[key] = Math.max(rdel[key] || 0, t)));
+  const rd = {}; [o.rdone, out.rdone].forEach(R => Object.entries(R || {}).forEach(([k, m]) => Object.entries(m).forEach(([id, t]) => { rd[k] = rd[k] || {}; rd[k][id] = Math.max(rd[k][id] || 0, +t || 1); })));
+  out.rdone = {}; Object.entries(rd).forEach(([k, m]) => Object.entries(m).forEach(([id, t]) => { if (t > (rdel[k + '|' + id] || 0)) (out.rdone[k] = out.rdone[k] || {})[id] = t; }));
+  out.rdel = rdel;
   out.rtime = Object.assign({}, o.rtime, out.rtime);
   out.dayColor = Object.assign({}, o.dayColor, out.dayColor);
   return out;
@@ -2349,7 +2367,7 @@ const Sync = {
       if (!snap.metadata.hasPendingWrites) this.status('synced', '동기화됨');
     }, err => { this.status('error', '동기화 오류'); this.msg(err.message); });
   },
-  push() { if (!this.user) return; clearTimeout(this.timer); this.status('busy', '저장 중'); this.timer = setTimeout(() => this.pushNow(), 700); },
+  push() { trackDeletes(); if (!this.user) return; clearTimeout(this.timer); this.status('busy', '저장 중'); this.timer = setTimeout(() => this.pushNow(), 700); },
   pushNow() {
     if (!this.ref) return;
     trackDeletes();
@@ -3341,7 +3359,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1791415683';
+const APP_BUILD = '1791415924';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
