@@ -378,10 +378,10 @@ body.dragging .ev-bar{pointer-events:none}
 .dcol{position:relative;border-left:1px solid var(--line);cursor:cell;
   background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(200%/var(--slots) - 1px),var(--line-2) calc(200%/var(--slots) - 1px),var(--line-2) calc(200%/var(--slots))),
                    repeating-linear-gradient(to bottom,transparent 0,transparent calc(100%/var(--slots) - 1px),var(--line) calc(100%/var(--slots) - 1px),var(--line) calc(100%/var(--slots)))}
-.blk{position:absolute;border-radius:6px;padding:2px 6px;font-size:calc(11.5px*var(--fs));line-height:1.3;overflow:hidden;cursor:pointer;color:var(--ink);border-left:3px solid var(--bc);background:var(--bcs);box-shadow:0 1px 2px rgba(0,0,0,.06);word-break:keep-all;overflow-wrap:anywhere}
+.blk{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;border-radius:6px;padding:2px 6px;font-size:calc(11.5px*var(--fs));line-height:1.3;overflow:hidden;cursor:pointer;color:var(--ink);border-left:3px solid var(--bc);background:var(--bcs);box-shadow:0 1px 2px rgba(0,0,0,.06);word-break:keep-all;overflow-wrap:anywhere}
 .blk{z-index:1}
 .blk small{display:block;font-size:.85em;color:var(--ink-2)}
-.blk.short{display:flex;align-items:center;gap:5px;white-space:nowrap;padding-top:0;padding-bottom:0}
+.blk.short{display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:5px;white-space:nowrap;padding-top:0;padding-bottom:0}
 .blk.short b{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .blk.short small{display:inline;flex:none}
 .blk.has-memo{padding-right:18px}
@@ -394,6 +394,10 @@ body.dragging .ev-bar{pointer-events:none}
 .bin-cats button i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:3px}
 .bin-cats button[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);font-weight:700;background:var(--accent-soft)}
 .blk.done{opacity:.55}
+.blk.light-text small,.blk.light-text .bmemo{color:rgba(255,255,255,.88)}
+.bg-row{display:flex;flex-direction:column;gap:6px}
+.bg-row .palette{grid-template-columns:repeat(8,22px);gap:4px;padding:0}
+.bg-row .palette .sw{width:22px;height:22px}
 .blk.done b{text-decoration:line-through}
 .blk:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:2}
 .bin{position:absolute;left:2px;right:2px;z-index:4;border:1.5px solid var(--accent);border-radius:6px;background:rgb(var(--glass-rgb) / .97);font-size:calc(11.5px*var(--fs));padding:2px 5px;outline:none}
@@ -656,6 +660,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
   <h4>시간 블록</h4>
   <input class="field" id="bpTitle" placeholder="업무 내용">
   <div id="bpCatWrap"><h4 style="margin-top:10px">카테고리</h4><div class="row2" id="bpCats"></div></div>
+  <h4 style="margin-top:10px">배경색</h4><div class="bg-row"><div class="palette" id="bpBgs"></div><div style="display:flex;gap:6px;align-items:center"><input class="field" id="bpHex" placeholder="#FDE8E8" maxlength="7" style="width:96px!important" aria-label="색상 코드"><button class="btn ghost sm" id="bpBgReset" type="button">기본색</button></div></div>
   <div id="bpDateWrap"><h4 style="margin-top:10px">날짜</h4><input class="field" id="bpDate" placeholder="10/7" style="width:110px!important" aria-label="날짜"></div>
   <h4 style="margin-top:10px">시간</h4>
   <div class="bp-time"><input class="field" type="number" id="bpSH" min="0" max="24" aria-label="시작 시">:<input class="field" type="number" id="bpSM" min="0" max="59" step="5" aria-label="시작 분"><span>~</span><input class="field" type="number" id="bpEH" min="0" max="24" aria-label="종료 시">:<input class="field" type="number" id="bpEM" min="0" max="59" step="5" aria-label="종료 분"></div>
@@ -1162,7 +1167,7 @@ function carryOver() {
   let moved = 0;
   Object.keys(state.daily).filter(k => k < todayK).sort().forEach(k => {
     const keep = [], mv = [];
-    state.daily[k].forEach(x => (x.done || !catCarry(x) ? keep : mv).push(x));   // '미루기'를 켠 카테고리만 다음 날로
+    state.daily[k].forEach(x => (x.done || x.sched || !catCarry(x) ? keep : mv).push(x));   // '미루기'를 켠 카테고리만 다음 날로
     if (!mv.length) return;
     mv.forEach(x => { if (!x.from) x.from = k; });
     const today = bucketOf('daily', todayK);
@@ -1283,7 +1288,7 @@ function dayInfo(d) {
   const custom = state.customHol.filter(h => h.date === k).map(h => h.name);
   const cnRaw = cnHolidays(y)[k];
   const cn = cnRaw && prefs.cn && (cnRaw.off || prefs.cnWork) ? cnRaw : null;
-  return { k, kr: [...kr, ...custom], cn, todos: timeSort(vis(state.daily[k])), routines: state.routines.filter(r => !r.panel && ruleOn(r, d) && catOn(r)), rdone: state.rdone[k] || {} };
+  return { k, kr: [...kr, ...custom], cn, todos: timeSort(vis(state.daily[k]).filter(t => !t.sched)), routines: state.routines.filter(r => !r.panel && ruleOn(r, d) && catOn(r)), rdone: state.rdone[k] || {} };
 }
 function holidayLines(info) {
   // 한국·중국 휴일이 겹치면 "추석 / 中秋节"처럼 한 줄로
@@ -1398,7 +1403,7 @@ function fitCells() {
 
 function renderMini() {
   const now = new Date(), k = key(now);
-  const todos = vis(state.daily[k]), rs = state.routines.filter(r => ruleOn(r, now) && catOn(r)), rd = state.rdone[k] || {};
+  const todos = vis(state.daily[k]).filter(t => !t.sched), rs = state.routines.filter(r => ruleOn(r, now) && catOn(r)), rd = state.rdone[k] || {};
   const left = todos.filter(t => !t.done).length + rs.filter(r => !rd[r.id]).length;
   const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const nextA = alarmsShown(now).find(a => a.time >= hm);
@@ -1457,7 +1462,7 @@ function renderSide() {
   const d = sel, info = dayInfo(d), k = info.k;
   const wk = isoWeek(d), mon = monday(d), sun = addDays(mon, 6);
   const mk = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-  const daily = timeSort(vis(state.daily[k])), weekly = timeSort(vis(state.weekly[wk.key])), monthly = timeSort(vis(state.monthly[mk]));
+  const daily = timeSort(vis(state.daily[k]).filter(t => !t.sched)), weekly = timeSort(vis(state.weekly[wk.key])), monthly = timeSort(vis(state.monthly[mk]));
   const rItems = info.routines.map(r => ({ ...r, done: !!info.rdone[r.id] }));
   const alarms = alarmsShown(d).filter(a => !isWorkAlarm(a));
   const workAlarms = vis(state.alarms).filter(isWorkAlarm).sort((a, b) => a.time < b.time ? -1 : 1);
@@ -1467,7 +1472,7 @@ function renderSide() {
   const bizToday = bizAll.filter(r => ruleOn(r, d)).map(r => ({ ...r, done: !!(state.rdone[k] || {})[r.id] }));
   const pb = progress([...bizToday, ...(bizDay ? vis(state.alarms).filter(isWorkAlarm).map(a => ({ done: !!(state.rdone[k] || {})[a.id] })) : [])]);
   // 일정 섹션은 카테고리를 숨겨도 왼쪽 패널에서는 계속 보이게 (숨김은 캘린더에만 적용)
-  const dPlan = timeSort(state.daily[k] || []).filter(x => !isWorkCat(x)), dWork = daily.filter(isWorkCat);
+  const dPlan = timeSort(state.daily[k] || []).filter(x => !x.sched && !isWorkCat(x)), dWork = daily.filter(isWorkCat);
   const rPlan = state.routines.filter(r => !r.panel && ruleOn(r, d) && !isWorkCat(r)).map(r => ({ ...r, done: !!(state.rdone[k] || {})[r.id] })), rWork = rItems.filter(isWorkCat);
   const evPlan = (state.events || []).filter(e => e.start <= k && e.end >= k).sort((a, b) => a.start < b.start ? -1 : 1);
   const workCat = (state.cats.find(c => c.id === 'work') || state.cats[0]).id;
@@ -1618,7 +1623,7 @@ function ncCommit(final) {
   });
   // 숨긴 카테고리 할 일은 카드에 안 보이지만 그대로 보존
   const ids = new Set(out.map(x => x.id)), res = []; let vi = 0;
-  old.forEach(o => { if (ids.has(o.id) || catOn(o)) { if (vi < out.length) res.push(out[vi++]); } else res.push(o); });
+  old.forEach(o => { if (ids.has(o.id) || (catOn(o) && !o.sched)) { if (vi < out.length) res.push(out[vi++]); } else res.push(o); });
   while (vi < out.length) res.push(out[vi++]);
   if (res.length) state.daily[k] = res; else delete state.daily[k];
   state.updatedAt = Date.now(); store.set('ync-data', state); Sync.push();
@@ -1632,7 +1637,7 @@ function openQuick(k, anchorEl) {
   $('#ncDate').textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일`;
   ncBody.innerHTML = '';
   ncDrawFixed(k);
-  const todos = vis(state.daily[k]);
+  const todos = vis(state.daily[k]).filter(t => !t.sched);
   todos.forEach(t => ncAddItem(t));
   if (!todos.length) ncAddItem(null);
   const el = $('#card'); el.style.width = prefs.cardW + 'px'; el.style.height = prefs.cardH + 'px'; el.classList.add('on');
@@ -2828,14 +2833,14 @@ function renderDaily() {
 
     // 시간표
     const rt = (state.rtime || {})[k] || {};
-    const rtItems = Object.entries(rt).map(([rid, v]) => { const r = state.routines.find(x => x.id === rid); return r && catOn(r) ? { id: rid, t: r.t, time: v.time, dur: v.dur, memo: v.memo, done: !!info.rdone[rid], cat: r.cat, kind: 'routine' } : null; }).filter(Boolean);
-    const timed = [...info.todos.filter(t => t.time), ...rtItems].map(t => { const st = hm2m(t.time); return { t, st, en: st + (t.dur || 30) }; }).filter(x => x.en > S && x.st < E).sort((a, b) => a.st - b.st || b.en - a.en);
+    const rtItems = Object.entries(rt).map(([rid, v]) => { const r = state.routines.find(x => x.id === rid); return r && catOn(r) ? { id: rid, t: r.t, time: v.time, dur: v.dur, memo: v.memo, bg: v.bg, done: !!info.rdone[rid], cat: r.cat, kind: 'routine' } : null; }).filter(Boolean);
+    const timed = [...vis(state.daily[k] || []).filter(t => t.time), ...rtItems].map(t => { const st = hm2m(t.time); return { t, st, en: st + (t.dur || 30) }; }).filter(x => x.en > S && x.st < E).sort((a, b) => a.st - b.st || b.en - a.en);
     const laneEnd = []; timed.forEach(x => { let L = laneEnd.findIndex(e => e <= x.st); if (L < 0) { L = laneEnd.length; laneEnd.push(0); } laneEnd[L] = x.en; x.lane = L; });
     timed.forEach(x => { x.lanes = Math.max(...timed.filter(y => y.st < x.en && y.en > x.st).map(y => y.lane)) + 1; });
     let blocks = timed.map(x => {
-      const c = catOf(x.t).color, top = pct(Math.max(x.st, S)), ht = pct(Math.min(x.en, E)) - top, wdt = 100 / x.lanes;
+      const c = catOf(x.t).color, work = isWorkCat(x.t), bg = x.t.bg || (work ? BLK_WORK_BG : c), dk = lum(bg) > .5, top = pct(Math.max(x.st, S)), ht = pct(Math.min(x.en, E)) - top, wdt = 100 / x.lanes;
       const short = (Math.min(x.en, E) - Math.max(x.st, S)) < 60, memo = x.t.memo ? `<i class="bmemo" data-memo="${esc(x.t.memo)}" data-t="${esc(x.t.t)}">${IC.note}</i>` : '';
-      return `<div class="blk${x.t.done ? ' done' : ''}${short ? ' short' : ''}${memo ? ' has-memo' : ''}" data-dk="${k}" data-id="${x.t.id}" data-kind="${x.t.kind || 'todo'}" style="top:${top}%;height:calc(${ht}% - 2px);left:calc(${x.lane * wdt}% + 2px);width:calc(${wdt}% - 4px);--bc:${c};--bcs:${c}26" title="${esc(x.t.t)} · ${x.t.time}~${m2hm(Math.min(x.en, 1440))}"><b>${x.t.kind === 'routine' ? '↻ ' : ''}${esc(x.t.t)}</b>${short ? '' : `<small>${x.t.time}~${m2hm(Math.min(x.en, 1440))}</small>`}${memo}</div>`;
+      return `<div class="blk${dk ? '' : ' light-text'}${x.t.done ? ' done' : ''}${short ? ' short' : ''}${memo ? ' has-memo' : ''}" data-dk="${k}" data-id="${x.t.id}" data-kind="${x.t.kind || 'todo'}" style="top:${top}%;height:calc(${ht}% - 2px);left:calc(${x.lane * wdt}% + 2px);width:calc(${wdt}% - 4px);--bc:${x.t.bg ? shadeHex(bg, -.25) : c};--bcs:${bg};color:${dk ? 'var(--ink)' : '#fff'}" title="${esc(x.t.t)} · ${x.t.time}~${m2hm(Math.min(x.en, 1440))}"><b>${x.t.kind === 'routine' ? '↻ ' : ''}${esc(x.t.t)}</b>${short ? '' : `<small>${x.t.time}~${m2hm(Math.min(x.en, 1440))}</small>`}${memo}</div>`;
     }).join('');
     blocks += alarmsShown(d).filter(a => { const m = hm2m(a.time); return m >= S && m <= E; }).map(a => `<span class="balarm" style="top:${pct(hm2m(a.time))}%">🔔 ${a.time} ${esc(a.t)}</span>`).join('');
     if (k === todayK) { const n = new Date(), nm = n.getHours() * 60 + n.getMinutes(); if (nm >= S && nm <= E) blocks += `<i class="nowline" style="top:${pct(nm)}%"></i>`; }
@@ -2931,7 +2936,7 @@ function openBlockInput(col, m, dur = 30) {
   const fin = ok => {
     if (done) return; done = true; if (pend && pend.wrap === wrap) pend = null;
     const hadFocus = wrap.contains(document.activeElement), v = inp.value.trim(); wrap.remove(); box.remove();
-    if (ok && v) { const tt = parseTimeText(v); bucketOf('daily', col.dataset.dk).push(tt ? { id: uid(), t: tt.t, done: false, time: tt.time, dur: tt.dur, cat } : { id: uid(), t: v, done: false, time: m2hm(m), dur, cat }); save(); }
+    if (ok && v) { const tt = parseTimeText(v); bucketOf('daily', col.dataset.dk).push(tt ? { id: uid(), t: tt.t, done: false, time: tt.time, dur: tt.dur, cat, sched: true } : { id: uid(), t: v, done: false, time: m2hm(m), dur, cat, sched: true }); save(); }
     if (hadFocus) releaseFocus();   // 다른 입력칸의 포커스는 건드리지 않음
   };
   pend = { col, get a() { return m; }, inp, wrap, fin, setRange };
@@ -2951,12 +2956,23 @@ function openBlockPop(anchor, k, id, kind = 'todo') {
   $('#bpTitle').value = x.t; $('#bpTitle').disabled = kind === 'routine';
   $('#bpCatWrap').classList.toggle('hidden', kind === 'routine'); $('#bpDateWrap').classList.toggle('hidden', kind === 'routine'); $('#bpDate').value = fmtMD(k);
   $('#bpCats').innerHTML = catChips(bpT.cat);
+  bpT.bg = x.bg || null; drawBpBg();
   $('#bpMemo').value = x.memo || '';
   setBpTimes(st, en);
   $('#bpDone').textContent = x.done ? '완료 취소' : '완료';
   const del = $('#bpDel'); del.textContent = kind === 'routine' ? '시간표에서 빼기' : '삭제'; delete del.dataset.armed; del.classList.remove('del-armed');
   placePop($('#blockPop'), anchor);
 }
+const BLK_WORK_BG = '#eef6ff';   // 업무 블록 기본 배경 (밝은 색)
+function shadeHex(h, f) { const n = parseInt(h.slice(1), 16); const c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * (1 + f))))); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); }
+function drawBpBg() {
+  $('#bpBgs').innerHTML = DAY_COLORS.map(c => `<button class="sw" type="button" data-bg="${c}" style="background:${c}" aria-pressed="${bpT.bg === c}" aria-label="${c}"></button>`).join('');
+  $('#bpHex').value = bpT.bg && !DAY_COLORS.includes(bpT.bg) ? bpT.bg.toUpperCase() : '';
+}
+$('#bpBgs').onclick = e => { const b = e.target.closest('[data-bg]'); if (b) { bpT.bg = b.dataset.bg; drawBpBg(); } };
+$('#bpBgReset').onclick = () => { bpT.bg = null; drawBpBg(); };
+function readBpHex() { const v = $('#bpHex').value.trim(); if (!v) return true; const h = normHex(v); if (!h) { toast('색상 코드는 #FDE8E8 처럼 써주세요'); $('#bpHex').focus(); return false; } bpT.bg = h; return true; }
+$('#bpHex').addEventListener('change', () => { if (readBpHex()) drawBpBg(); });
 function setBpTimes(st, en) {
   $('#bpSH').value = Math.floor(st / 60); $('#bpSM').value = pad(st % 60);
   $('#bpEH').value = Math.floor(en / 60); $('#bpEM').value = pad(en % 60);
@@ -2973,15 +2989,16 @@ $('#bpCats').onclick = e => { const b = e.target.closest('button'); if (b) { bpT
 const bpItem = () => bpT && (state.daily[bpT.k] || []).find(t => t.id === bpT.id);
 $('#bpSave').onclick = () => {
   const { st, en } = readBp(); if (en <= st) return toast('끝나는 시간이 시작보다 늦어야 해요');
-  if (bpT && bpT.kind === 'routine') { const v = ((state.rtime || {})[bpT.k] || {})[bpT.id]; if (v) { v.time = tHM(st); v.dur = en - st; const mm = $('#bpMemo').value.trim(); if (mm) v.memo = mm; else delete v.memo; } closePops(); return save(); }
+  if (!readBpHex()) return;
+  if (bpT && bpT.kind === 'routine') { const v = ((state.rtime || {})[bpT.k] || {})[bpT.id]; if (v) { v.time = tHM(st); v.dur = en - st; if (bpT.bg) v.bg = bpT.bg; else delete v.bg; const mm = $('#bpMemo').value.trim(); if (mm) v.memo = mm; else delete v.memo; } closePops(); return save(); }
   const nt = moveToDate({ scope: 'daily', b: bpT.k, id: bpT.id }, $('#bpDate').value); if (!nt) return;
   bpT.k = nt.b;
   const x = bpItem(); if (!x) return; const v = $('#bpTitle').value.trim(); if (v) x.t = v;
-  x.time = tHM(st); x.dur = en - st; x.cat = bpT.cat;
+  x.time = tHM(st); x.dur = en - st; x.cat = bpT.cat; if (bpT.bg) x.bg = bpT.bg; else delete x.bg;
   const mm = $('#bpMemo').value.trim(); if (mm) x.memo = mm; else delete x.memo;
   closePops(); save();
 };
-['#bpTitle', '#bpDate', '#bpSH', '#bpSM', '#bpEH', '#bpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#bpSave').click(); } }));
+['#bpTitle', '#bpHex', '#bpDate', '#bpSH', '#bpSM', '#bpEH', '#bpEM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#bpSave').click(); } }));
 $('#bpDone').onclick = () => {
   if (bpT && bpT.kind === 'routine') { const m = (state.rdone[bpT.k] = state.rdone[bpT.k] || {}); if (m[bpT.id]) delete m[bpT.id]; else m[bpT.id] = 1; closePops(); return save(); }
   const x = bpItem(); if (!x) return; x.done = !x.done; closePops(); save(); };
@@ -3315,7 +3332,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1791271465';
+const APP_BUILD = '1791414421';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
