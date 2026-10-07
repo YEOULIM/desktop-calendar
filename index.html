@@ -2840,7 +2840,7 @@ function renderDaily() {
     let blocks = timed.map(x => {
       const c = catOf(x.t).color, work = isWorkCat(x.t), bg = x.t.bg || (work ? BLK_WORK_BG : c), dk = lum(bg) > .5, top = pct(Math.max(x.st, S)), ht = pct(Math.min(x.en, E)) - top, wdt = 100 / x.lanes;
       const short = (Math.min(x.en, E) - Math.max(x.st, S)) < 60, memo = x.t.memo ? `<i class="bmemo" data-memo="${esc(x.t.memo)}" data-t="${esc(x.t.t)}">${IC.note}</i>` : '';
-      return `<div class="blk${dk ? '' : ' light-text'}${x.t.done ? ' done' : ''}${short ? ' short' : ''}${memo ? ' has-memo' : ''}" data-dk="${k}" data-id="${x.t.id}" data-kind="${x.t.kind || 'todo'}" style="top:${top}%;height:calc(${ht}% - 2px);left:calc(${x.lane * wdt}% + 2px);width:calc(${wdt}% - 4px);--bc:${x.t.bg ? shadeHex(bg, -.25) : c};--bcs:${bg};color:${dk ? 'var(--ink)' : '#fff'}" title="${esc(x.t.t)} · ${x.t.time}~${m2hm(Math.min(x.en, 1440))}"><b>${x.t.kind === 'routine' ? '↻ ' : ''}${esc(x.t.t)}</b>${short ? '' : `<small>${x.t.time}~${m2hm(Math.min(x.en, 1440))}</small>`}${memo}</div>`;
+      return `<div class="blk${x.t.done ? ' done' : ''}${short ? ' short' : ''}${memo ? ' has-memo' : ''}" data-dk="${k}" data-id="${x.t.id}" data-kind="${x.t.kind || 'todo'}" style="top:${top}%;height:calc(${ht}% - 2px);left:calc(${x.lane * wdt}% + 2px);width:calc(${wdt}% - 4px);--bc:${x.t.bg ? shadeHex(bg, -.25) : c};--bcs:${bg}${lum(bg) > .6 ? '66' : '1a'};color:var(--ink)" title="${esc(x.t.t)} · ${x.t.time}~${m2hm(Math.min(x.en, 1440))}"><b>${x.t.kind === 'routine' ? '↻ ' : ''}${esc(x.t.t)}</b>${short ? '' : `<small>${x.t.time}~${m2hm(Math.min(x.en, 1440))}</small>`}${memo}</div>`;
     }).join('');
     blocks += alarmsShown(d).filter(a => { const m = hm2m(a.time); return m >= S && m <= E; }).map(a => `<span class="balarm" style="top:${pct(hm2m(a.time))}%">🔔 ${a.time} ${esc(a.t)}</span>`).join('');
     if (k === todayK) { const n = new Date(), nm = n.getHours() * 60 + n.getMinutes(); if (nm >= S && nm <= E) blocks += `<i class="nowline" style="top:${pct(nm)}%"></i>`; }
@@ -2963,7 +2963,7 @@ function openBlockPop(anchor, k, id, kind = 'todo') {
   const del = $('#bpDel'); del.textContent = kind === 'routine' ? '시간표에서 빼기' : '삭제'; delete del.dataset.armed; del.classList.remove('del-armed');
   placePop($('#blockPop'), anchor);
 }
-const BLK_WORK_BG = '#eef6ff';   // 업무 블록 기본 배경 (밝은 색)
+const BLK_WORK_BG = '#dcebff';   // 업무 블록 기본 배경 (밝은 색)
 function shadeHex(h, f) { const n = parseInt(h.slice(1), 16); const c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * (1 + f))))); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); }
 function drawBpBg() {
   $('#bpBgs').innerHTML = DAY_COLORS.map(c => `<button class="sw" type="button" data-bg="${c}" style="background:${c}" aria-pressed="${bpT.bg === c}" aria-label="${c}"></button>`).join('');
@@ -3332,7 +3332,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1791414421';
+const APP_BUILD = '1791414815';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
