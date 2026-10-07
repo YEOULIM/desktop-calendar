@@ -381,7 +381,7 @@ body.dragging .ev-bar{pointer-events:none}
 .blk{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;border-radius:6px;padding:2px 6px;font-size:calc(11.5px*var(--fs));line-height:1.3;overflow:hidden;cursor:pointer;color:var(--ink);border-left:3px solid var(--bc);background:var(--bcs);box-shadow:0 1px 2px rgba(0,0,0,.06);word-break:keep-all;overflow-wrap:anywhere}
 .blk{z-index:1}
 .blk small{display:block;font-size:.85em;color:var(--ink-2)}
-.blk.short{display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:5px;white-space:nowrap;padding-top:0;padding-bottom:0}
+.blk.short{display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:5px;white-space:nowrap;padding-top:2px;padding-bottom:0;line-height:1.2}
 .blk.short b{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .blk.short small{display:inline;flex:none}
 .blk.has-memo{padding-right:18px}
@@ -1065,6 +1065,8 @@ const PALETTE = [
 const COLOR_TARGETS = [['ink', '글자'], ['ink-2', '보조 글자'], ['ink-3', '흐린 글자 (음력·안내)'], ['accent', '강조 (오늘·체크)'], ['kr', '일요일·한국 공휴일'], ['sat', '토요일'], ['cn', '중국 공휴일']];
 const normalize = s => { const o = Object.assign(structuredClone(DEF_STATE), s || {}); if (!Array.isArray(o.cats) || !o.cats.length) o.cats = structuredClone(DEF_CATS); return o; };
 function catOf(x) { return state.cats.find(c => c.id === (x && x.cat)) || state.cats[0]; }
+// 시간표 내용: 시간표에서 만든 것 + 시간이 정해진 업무 → 캘린더·할 일에는 안 보임
+const isSchedT = x => !!x.sched || (!!x.time && isWorkCat(x));
 function catCarry(x) { const c = catOf(x); return c.carry !== undefined ? !!c.carry : c.id === 'work'; }   // 완료 안 하면 다음 날로 미룰지 (카테고리별)
 function catStyle(cid) { const c = state.cats.find(x => x.id === cid) || state.cats[0]; return c.style || (c.id === 'work' ? 'dot' : 'bar'); }
 const isWorkCat = x => catOf(x).id === 'work' || (catOf(x).id === state.cats[0].id && !state.cats.some(c => c.id === 'work'));
@@ -1167,7 +1169,7 @@ function carryOver() {
   let moved = 0;
   Object.keys(state.daily).filter(k => k < todayK).sort().forEach(k => {
     const keep = [], mv = [];
-    state.daily[k].forEach(x => (x.done || x.sched || !catCarry(x) ? keep : mv).push(x));   // '미루기'를 켠 카테고리만 다음 날로
+    state.daily[k].forEach(x => (x.done || isSchedT(x) || !catCarry(x) ? keep : mv).push(x));   // '미루기'를 켠 카테고리만 다음 날로
     if (!mv.length) return;
     mv.forEach(x => { if (!x.from) x.from = k; });
     const today = bucketOf('daily', todayK);
@@ -1288,7 +1290,7 @@ function dayInfo(d) {
   const custom = state.customHol.filter(h => h.date === k).map(h => h.name);
   const cnRaw = cnHolidays(y)[k];
   const cn = cnRaw && prefs.cn && (cnRaw.off || prefs.cnWork) ? cnRaw : null;
-  return { k, kr: [...kr, ...custom], cn, todos: timeSort(vis(state.daily[k]).filter(t => !t.sched)), routines: state.routines.filter(r => !r.panel && ruleOn(r, d) && catOn(r)), rdone: state.rdone[k] || {} };
+  return { k, kr: [...kr, ...custom], cn, todos: timeSort(vis(state.daily[k]).filter(t => !isSchedT(t))), routines: state.routines.filter(r => !r.panel && ruleOn(r, d) && catOn(r)), rdone: state.rdone[k] || {} };
 }
 function holidayLines(info) {
   // 한국·중국 휴일이 겹치면 "추석 / 中秋节"처럼 한 줄로
@@ -1403,7 +1405,7 @@ function fitCells() {
 
 function renderMini() {
   const now = new Date(), k = key(now);
-  const todos = vis(state.daily[k]).filter(t => !t.sched), rs = state.routines.filter(r => ruleOn(r, now) && catOn(r)), rd = state.rdone[k] || {};
+  const todos = vis(state.daily[k]).filter(t => !isSchedT(t)), rs = state.routines.filter(r => ruleOn(r, now) && catOn(r)), rd = state.rdone[k] || {};
   const left = todos.filter(t => !t.done).length + rs.filter(r => !rd[r.id]).length;
   const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const nextA = alarmsShown(now).find(a => a.time >= hm);
@@ -1462,7 +1464,7 @@ function renderSide() {
   const d = sel, info = dayInfo(d), k = info.k;
   const wk = isoWeek(d), mon = monday(d), sun = addDays(mon, 6);
   const mk = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-  const daily = timeSort(vis(state.daily[k]).filter(t => !t.sched)), weekly = timeSort(vis(state.weekly[wk.key])), monthly = timeSort(vis(state.monthly[mk]));
+  const daily = timeSort(vis(state.daily[k]).filter(t => !isSchedT(t))), weekly = timeSort(vis(state.weekly[wk.key])), monthly = timeSort(vis(state.monthly[mk]));
   const rItems = info.routines.map(r => ({ ...r, done: !!info.rdone[r.id] }));
   const alarms = alarmsShown(d).filter(a => !isWorkAlarm(a));
   const workAlarms = vis(state.alarms).filter(isWorkAlarm).sort((a, b) => a.time < b.time ? -1 : 1);
@@ -1472,7 +1474,7 @@ function renderSide() {
   const bizToday = bizAll.filter(r => ruleOn(r, d)).map(r => ({ ...r, done: !!(state.rdone[k] || {})[r.id] }));
   const pb = progress([...bizToday, ...(bizDay ? vis(state.alarms).filter(isWorkAlarm).map(a => ({ done: !!(state.rdone[k] || {})[a.id] })) : [])]);
   // 일정 섹션은 카테고리를 숨겨도 왼쪽 패널에서는 계속 보이게 (숨김은 캘린더에만 적용)
-  const dPlan = timeSort(state.daily[k] || []).filter(x => !x.sched && !isWorkCat(x)), dWork = daily.filter(isWorkCat);
+  const dPlan = timeSort(state.daily[k] || []).filter(x => !isSchedT(x) && !isWorkCat(x)), dWork = daily.filter(isWorkCat);
   const rPlan = state.routines.filter(r => !r.panel && ruleOn(r, d) && !isWorkCat(r)).map(r => ({ ...r, done: !!(state.rdone[k] || {})[r.id] })), rWork = rItems.filter(isWorkCat);
   const evPlan = (state.events || []).filter(e => e.start <= k && e.end >= k).sort((a, b) => a.start < b.start ? -1 : 1);
   const workCat = (state.cats.find(c => c.id === 'work') || state.cats[0]).id;
@@ -1623,7 +1625,7 @@ function ncCommit(final) {
   });
   // 숨긴 카테고리 할 일은 카드에 안 보이지만 그대로 보존
   const ids = new Set(out.map(x => x.id)), res = []; let vi = 0;
-  old.forEach(o => { if (ids.has(o.id) || (catOn(o) && !o.sched)) { if (vi < out.length) res.push(out[vi++]); } else res.push(o); });
+  old.forEach(o => { if (ids.has(o.id) || (catOn(o) && !isSchedT(o))) { if (vi < out.length) res.push(out[vi++]); } else res.push(o); });
   while (vi < out.length) res.push(out[vi++]);
   if (res.length) state.daily[k] = res; else delete state.daily[k];
   state.updatedAt = Date.now(); store.set('ync-data', state); Sync.push();
@@ -1637,7 +1639,7 @@ function openQuick(k, anchorEl) {
   $('#ncDate').textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일`;
   ncBody.innerHTML = '';
   ncDrawFixed(k);
-  const todos = vis(state.daily[k]).filter(t => !t.sched);
+  const todos = vis(state.daily[k]).filter(t => !isSchedT(t));
   todos.forEach(t => ncAddItem(t));
   if (!todos.length) ncAddItem(null);
   const el = $('#card'); el.style.width = prefs.cardW + 'px'; el.style.height = prefs.cardH + 'px'; el.classList.add('on');
@@ -3332,7 +3334,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1791414815';
+const APP_BUILD = '1791415103';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
