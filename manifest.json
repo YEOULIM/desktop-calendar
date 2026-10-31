@@ -1,0 +1,12 @@
+{
+  "name": "여늘 데스크 캘린더",
+  "short_name": "캘린더",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
