@@ -132,6 +132,12 @@ button.title:hover{background:var(--accent-soft)}
 .cell.sel{background:rgb(var(--glass-rgb) / .55);box-shadow:inset 0 0 0 1.5px var(--line-2);border-radius:10px}
 .cell.out{opacity:.38}
 .cell .top{display:flex;align-items:baseline;gap:5px}
+.sidego{margin-left:auto;align-self:center;flex:none;border:0;border-radius:999px;padding:1px 8px;background:var(--accent);color:#fff;font:inherit;font-size:calc(10.5px*var(--fs));font-weight:650;line-height:1.6;cursor:pointer;white-space:nowrap}
+.sidego:hover{filter:brightness(1.08)}
+#prevM[hidden],#nextM[hidden]{display:none}
+.dh .dd .sidego{margin-left:auto}
+.side-today{align-self:center;border:1px solid var(--line-2);background:transparent;color:var(--ink-2);border-radius:999px;padding:1px 9px;font:inherit;font-size:calc(11px*var(--fs));font-weight:600;cursor:pointer;white-space:nowrap}
+.side-today:hover{color:var(--accent);border-color:var(--accent)}
 .cell .d{font-size:calc(13.5px*var(--fs-d));font-weight:650;min-width:calc(22px*var(--fs-d));height:calc(22px*var(--fs-d));display:inline-grid;place-items:center;border-radius:50%;margin:-2px 0 0 -3px}
 .cell.sun .d,.cell.kr-off .d{color:var(--kr)}
 .cell.sat:not(.kr-off) .d{color:var(--sat)}
@@ -626,9 +632,11 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
         <span class="meta"><span id="mYear">2026</span><svg class="ym-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 4.5 3 3 3-3"/></svg></span>
       </button>
       <div class="nav">
+        <button class="icon-btn" id="prevM" aria-label="한 달 전" title="한 달 전"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3 3 8l5 5M13 3 8 8l5 5"/></svg></button>
         <button class="icon-btn" id="prev" aria-label="이전 달"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3 5 8l5 5"/></svg></button>
         <button class="pill" id="todayBtn">오늘</button>
         <button class="icon-btn" id="next" aria-label="다음 달"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 3 5 5-5 5"/></svg></button>
+        <button class="icon-btn" id="nextM" aria-label="한 달 뒤" title="한 달 뒤"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 3 5 5-5 5M8 3l5 5-5 5"/></svg></button>
       </div>
       <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="할 일 검색" autocomplete="off" aria-label="할 일 검색"><div id="qres" role="listbox"></div></div>
       <div class="spacer"></div>
@@ -1144,6 +1152,7 @@ if (prefs.sidePx === undefined) {   // 예전 % 설정을 px로
 const goMonth = d => prefs.rolling ? new Date(d.getFullYear(), d.getMonth(), d.getDate()) : new Date(d.getFullYear(), d.getMonth(), 1);
 let view = goMonth(new Date());
 let sel = new Date();
+let sideD = new Date();   // 왼쪽 패널에 보이는 날짜 (기본은 오늘, '이 날 보기'로만 바뀜)
 let todayK = key(new Date());
 
 function collectIds(st) {
@@ -1331,6 +1340,7 @@ function render() {
   renderMini();
   const isDaily = prefs.viewMode === 'daily';
   ['#dow', '#grid'].forEach(x => $(x).classList.toggle('hidden', isDaily)); $('#daily').classList.toggle('hidden', !isDaily);
+  { const noM = !isDaily && (!prefs.rolling || !isWide()); $('#prevM').hidden = noM; $('#nextM').hidden = noM; }   // < > 가 이미 한 달씩이면 >> 숨김
   if (isDaily) { renderDaily(); renderSide(); return; }
   $('#mNum').textContent = view.getMonth() + 1;
   $('#mYear').textContent = view.getFullYear();
@@ -1397,7 +1407,7 @@ function render() {
       });
       const dots = items.filter(it => !isPill(it)).slice(0, 6).map(it => `<i style="${it.color ? 'background:' + it.color : it.alarm ? 'background:var(--accent)' : ''}${it.done ? ';opacity:.35' : ''}"></i>`).join('');
       html += `<div class="${cls.join(' ')}" style="grid-row:${r + 1};grid-column:${c + colOff};${dc ? `--dc:${dc}` : ''}" data-k="${info.k}" role="button" tabindex="0" aria-label="${d.getMonth()+1}월 ${d.getDate()}일" title="더블클릭하면 이 칸에서 바로 할 일을 추가해요">
-        <div class="top"><span class="d">${d.getDate()}</span>${prefs.rolling && d.getDate() === 1 ? `<span class="mtag">${d.getMonth() + 1}월</span>` : ''}${lun}${work}</div>${need[c] ? `<div class="ev-sp" style="height:calc(${need[c]}*(var(--barh) + 2px))"></div>` : ''}${body}<div class="dots">${dots}</div></div>`;
+        <div class="top"><span class="d">${d.getDate()}</span>${prefs.rolling && d.getDate() === 1 ? `<span class="mtag">${d.getMonth() + 1}월</span>` : ''}${lun}${work}${info.k === selK && info.k !== key(sideD) ? `<button class="sidego" data-sidego title="왼쪽 패널에서 이 날짜 업무 보기">${isWide() ? '이 날 보기' : '보기'}</button>` : ''}</div>${need[c] ? `<div class="ev-sp" style="height:calc(${need[c]}*(var(--barh) + 2px))"></div>` : ''}${body}<div class="dots">${dots}</div></div>`;
     }
   }
   grid.innerHTML = html + bars;
@@ -1481,7 +1491,7 @@ function updateSideScroll() {
   if (up) up.disabled = sd.scrollTop < 4; if (dn) dn.disabled = sd.scrollTop + sd.clientHeight >= sd.scrollHeight - 4;
 }
 function renderSide() {
-  const d = sel, info = dayInfo(d), k = info.k;
+  const d = sideD, info = dayInfo(d), k = info.k;
   const wk = isoWeek(d), mon = monday(d), sun = addDays(mon, 6);
   const mk = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
   const daily = timeSort(vis(state.daily[k]).filter(t => !isSchedT(t))), weekly = timeSort(vis(state.weekly[wk.key])), monthly = timeSort(vis(state.monthly[mk]));
@@ -1509,7 +1519,7 @@ function renderSide() {
   const catOpen = prefs.catOpen !== false;
   $('#side').innerHTML = `
     <div>
-      <div class="day-title"><h2>${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일</h2><span>${k === todayK ? '오늘' : ''}${l ? ` 음 ${l.leap ? '윤' : ''}${l.m}.${l.d}` : ''}</span><button class="day-color-btn" data-daycolor="${k}" title="이 날짜 배경색" aria-label="이 날짜 배경색" style="background:${(state.dayColor || {})[k] || 'transparent'}"></button></div>
+      <div class="day-title"><h2>${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일</h2><span>${k === todayK ? '오늘' : ''}${l ? ` 음 ${l.leap ? '윤' : ''}${l.m}.${l.d}` : ''}</span>${k !== todayK ? `<button class="side-today" data-sidetoday title="왼쪽 패널을 오늘로 되돌리기">오늘로</button>` : ''}<button class="day-color-btn" data-daycolor="${k}" title="이 날짜 배경색" aria-label="이 날짜 배경색" style="background:${(state.dayColor || {})[k] || 'transparent'}"></button></div>
       ${tags ? `<div class="day-tags">${tags}</div>` : ''}
       <div class="vtabs" role="tablist" id="vtabs"><button role="tab" data-view="cal" aria-selected="${prefs.viewMode !== 'daily'}">캘린더</button><button role="tab" data-view="daily" aria-selected="${prefs.viewMode === 'daily'}">데일리</button></div>
     </div>
@@ -1574,13 +1584,15 @@ function releaseFocus() { if (document.activeElement && document.activeElement !
 
 $('#grid').addEventListener('click', e => {
   const c = e.target.closest('.cell'); if (!c) return;
+  if (e.target.closest('[data-sidego]')) { e.stopPropagation(); return showSide(c.dataset.k); }
   if (c.dataset.k === key(sel)) return;          // 같은 날짜를 다시 누르면 그대로 (더블클릭용)
   sel = parse(c.dataset.k);
   if (!prefs.rolling && sel.getMonth() !== view.getMonth()) view = goMonth(sel);
   render();
-  if (!isWide()) $('#side').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
+function showSide(k) { sideD = parse(k); sel = parse(k); render(); if (!isWide()) $('#side').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 $('#grid').addEventListener('dblclick', e => {
+  if (e.target.closest('[data-sidego]')) return;
   const c = e.target.closest('.cell'); if (!c) return;
   openQuick(c.dataset.k);
 });
@@ -1810,7 +1822,7 @@ $('#side').addEventListener('keydown', e => {
         state.alarms.push({ id: uid(), t: m[3].trim(), time, freq: 'weekdays', days: [], dom: 1, start: todayK, end: null, hol: 'skip', panel: true, on: true, cat: defaultCat() });
         toast(`평일 ${time} 알림을 추가했어요`);
       } else {
-        state.routines.push({ id: uid(), t: v, freq: 'weekdays', days: [], dom: 1, start: key(sel) < todayK ? key(sel) : todayK, end: null, skipHol: true, panel: true, cat: defaultCat() });
+        state.routines.push({ id: uid(), t: v, freq: 'weekdays', days: [], dom: 1, start: key(sideD) < todayK ? key(sideD) : todayK, end: null, skipHol: true, panel: true, cat: defaultCat() });
       }
       inlineAdd = null; save(); releaseFocus();
     }
@@ -1830,7 +1842,7 @@ $('#side').addEventListener('keydown', e => {
 });
 $('#side').addEventListener('click', e => {
   const op = e.target.closest('[data-open]');
-  if (op) return op.dataset.open === 'alarm' ? openAlarm() : op.dataset.open === 'cats' ? openCats() : op.dataset.open === 'event' ? openEvent({ start: key(sel) }) : openRoutine();
+  if (op) return op.dataset.open === 'alarm' ? openAlarm() : op.dataset.open === 'cats' ? openCats() : op.dataset.open === 'event' ? openEvent({ start: key(sideD) }) : openRoutine();
   const evli = e.target.closest('[data-evid]'); if (evli) return openEvent({ edit: evli.dataset.evid });
   if (e.target.closest('[data-catfold]')) { prefs.catOpen = !(prefs.catOpen !== false); return savePrefs(); }
   const ct = e.target.closest('[data-cattoggle]');
@@ -1894,7 +1906,7 @@ function openEditor(li, item, list, scope, b, focusOn) {
     const title = inp.value.trim() || item.t;
     finish();
     if (a === 'repeat') openRoutine({ title, from: { k: b, id: item.id } });
-    if (a === 'alarm') openAlarm({ title, date: scope === 'daily' ? b : key(sel) });
+    if (a === 'alarm') openAlarm({ title, date: scope === 'daily' ? b : key(sideD) });
   });
   body.addEventListener('keydown', e => {
     if (e.isComposing) return;
@@ -1907,9 +1919,12 @@ function openEditor(li, item, list, scope, b, focusOn) {
 // 폰에서는 < > 가 한 달씩, PC(5주 흐름)에서는 한 주씩
 const shiftMonth = (d, n) => { const last = new Date(d.getFullYear(), d.getMonth() + n + 1, 0).getDate(); return new Date(d.getFullYear(), d.getMonth() + n, Math.min(d.getDate(), last)); };
 const navStep = n => { if (prefs.viewMode === 'daily') { if (isWide()) dWeek = addDays(dWeek || weekStartOf(new Date()), 7 * n); else d3 = addDays(d3 || new Date(), 3 * n); return render(); } view = !prefs.rolling ? new Date(view.getFullYear(), view.getMonth() + n, 1) : !isWide() ? shiftMonth(view, n) : addDays(view, 7 * n); render(); };
+const navMonth = n => { if (prefs.viewMode === 'daily') { if (isWide()) dWeek = weekStartOf(shiftMonth(dWeek || weekStartOf(new Date()), n)); else d3 = shiftMonth(d3 || new Date(), n); return render(); } view = !prefs.rolling ? new Date(view.getFullYear(), view.getMonth() + n, 1) : shiftMonth(view, n); render(); };
+$('#prevM').onclick = () => navMonth(-1);
+$('#nextM').onclick = () => navMonth(1);
 $('#prev').onclick = () => navStep(-1);
 $('#next').onclick = () => navStep(1);
-$('#todayBtn').onclick = () => { sel = new Date(); view = goMonth(sel); dWeek = weekStartOf(sel); d3 = new Date(); render(); };
+$('#todayBtn').onclick = () => { sel = new Date(); sideD = new Date(); view = goMonth(sel); dWeek = weekStartOf(sel); d3 = new Date(); render(); };
 $('#collapse').onclick = () => { prefs.collapsed = true; savePrefs(); };
 $('#mini').onclick = () => { prefs.collapsed = false; savePrefs(); };
 $('#openAlarm').onclick = () => openAlarm();
@@ -2843,7 +2858,7 @@ function renderDaily() {
     if (k === todayK) h += `<div class="dtoday" style="grid-row:1/4;grid-column:${col}"></div><div class="dtoday-b" style="grid-row:1/4;grid-column:${col}"></div>`;
     // 머리글
     const cls = ['dh']; if (w === 0) cls.push('sun'); if (w === 6) cls.push('sat'); if (info.kr.length) cls.push('kr-off'); if (k === selK) cls.push('sel');
-    h += `<div class="${cls.join(' ')}" style="grid-row:1;grid-column:${col}" data-dk="${k}" title="이 날짜 선택"><div class="dd"><b>${d.getDate()}</b><span>${DOW[w]}</span></div>${holidayLines(info).join('')}</div>`;
+    h += `<div class="${cls.join(' ')}" style="grid-row:1;grid-column:${col}" data-dk="${k}" title="이 날짜 선택"><div class="dd"><b>${d.getDate()}</b><span>${DOW[w]}</span>${k === selK && k !== key(sideD) ? `<button class="sidego" data-sidego title="왼쪽 패널에서 이 날짜 업무 보기">${isWide() ? '이 날 보기' : '보기'}</button>` : ''}</div>${holidayLines(info).join('')}</div>`;
     // 업무 칸: 캘린더와 같은 모양 (막대 카테고리는 색 막대, 점 카테고리는 체크박스), 기간 일정은 날짜를 가로질러 막대로
     const untimed = info.todos.filter(t => !t.time);
     const isPlanT = t => !isWorkCat(t);
@@ -2893,7 +2908,7 @@ dailyEl.addEventListener('click', e => {
   const pl = e.target.closest('[data-dplus]'); if (pl) { dAdd = pl.dataset.dplus; dAddCat = defaultCat(); return renderDaily(); }
   const ev = e.target.closest('[data-evid]'); if (ev) return openEvent({ edit: ev.dataset.evid });
   const tx = e.target.closest('.dti span'); if (tx) { const k = tx.closest('.dti').dataset.dk; sel = parse(k); return openQuick(k, $(`#daily .dh[data-dk="${k}"]`)); }
-  const hd = e.target.closest('.dh'); if (hd) { sel = parse(hd.dataset.dk); renderDaily(); return renderSide(); }
+  const hd = e.target.closest('.dh'); if (hd) { if (e.target.closest('[data-sidego]')) return showSide(hd.dataset.dk); sel = parse(hd.dataset.dk); return renderDaily(); }
   if (e.target.closest('.bmemo')) return;
   const bk = e.target.closest('.blk'); if (bk) return openBlockPop(bk, bk.dataset.dk, bk.dataset.id, bk.dataset.kind);
 });
@@ -3168,6 +3183,7 @@ $('#dayPop').addEventListener('mousedown', e => e.preventDefault());
 $('#ncColor').addEventListener('mousedown', e => e.preventDefault());
 $('#ncColor').onclick = () => { if (card.k) openDayPop($('#ncColor'), card.k); };
 $('#side').addEventListener('click', e => { const b = e.target.closest('[data-daycolor]'); if (b) openDayPop(b, b.dataset.daycolor); });
+$('#side').addEventListener('click', e => { if (e.target.closest('[data-sidetoday]')) { sideD = new Date(); sel = new Date(); render(); } });
 
 /* ======================== 할 일 드래그해서 다른 날짜에 추가 ======================== */
 let dragData = null;
@@ -3280,8 +3296,8 @@ $('#qres').addEventListener('click', e => {
   const b = e.target.closest('button[data-i]'); if (!b) return;
   const r = qResults[+b.dataset.i];
   if (r.routine) { $('#qres').classList.remove('on'); return openRoutine(); }
-  if (r.ev) { sel = parse(r.ev.start); view = goMonth(sel); render(); $('#qres').classList.remove('on'); return openEvent({ edit: r.ev.id }); }
-  sel = r.date; view = goMonth(sel); render();
+  if (r.ev) { sel = parse(r.ev.start); sideD = sel; view = goMonth(sel); render(); $('#qres').classList.remove('on'); return openEvent({ edit: r.ev.id }); }
+  sel = r.date; sideD = r.date; view = goMonth(sel); render();
   $('#qres').classList.remove('on'); releaseFocus();
   const c = $(`#grid .cell[data-k="${key(sel)}"]`); if (c) c.classList.add('flash');
 });
@@ -3362,7 +3378,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1793408471';
+const APP_BUILD = '1793615202';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
@@ -3410,7 +3426,7 @@ setTimeout(() => { if (!Sync.firstDone && !Sync.user) { Sync.firstDone = true; r
 if (document.fonts) document.fonts.ready.then(() => render());
 setInterval(() => {
   const k = key(new Date());
-  if (k !== todayK) { const wasToday = key(sel) === todayK; todayK = k; if (wasToday) { sel = new Date(); view = goMonth(sel); } render(); runCarry(); }
+  if (k !== todayK) { const wasToday = key(sel) === todayK, sideWasToday = key(sideD) === todayK; todayK = k; if (wasToday) { sel = new Date(); view = goMonth(sel); } if (sideWasToday) sideD = new Date(); render(); runCarry(); }
   checkAlarms();
   if (prefs.collapsed) renderMini();
 }, 10000);
