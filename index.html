@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" spellcheck="false">
+<html lang="ko" spellcheck="false" writingsuggestions="false">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -522,6 +522,7 @@ body.dragging .ev-bar{pointer-events:none}
 .rdot{flex:none;width:8px;height:8px;border-radius:2px;margin-top:6px}
 .add{width:100%;border:0;border-bottom:1px dashed var(--line-2);background:transparent;padding:6px 2px;font-size:calc(13px*var(--fs));outline:none}
 .add::placeholder{color:var(--ink-3)}
+input,textarea{caret-color:var(--ink)}
 .add:focus{border-bottom-color:var(--accent);border-bottom-style:solid}
 .empty{font-size:calc(12px*var(--fs));color:var(--ink-3);padding:2px}
 
@@ -618,7 +619,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
-<body spellcheck="false">
+<body spellcheck="false" writingsuggestions="false">
 <button class="panel" id="mini" aria-label="캘린더 펼치기">
   <span class="mnum" id="miniNum"></span>
   <span class="mtxt"><b id="miniDate"></b><span id="miniInfo"></span></span>
@@ -1608,7 +1609,7 @@ const growEl = el => { el.style.height = 'auto'; el.style.height = el.scrollHeig
 function ncAddItem(t, after) {
   const it = document.createElement('div'); it.className = 'nc-item' + (t && t.done ? ' done' : '');
   if (t) it.dataset.id = t.id;
-  it.innerHTML = `<div class="nc-line"><span class="nc-grip" draggable="true" title="드래그해서 다른 날짜로 옮기기" aria-hidden="true">⋮⋮</span><span class="bul" role="button" title="완료 표시"><i></i>${CHECK}</span><textarea class="nc-t" rows="1" placeholder="할 일 입력"></textarea></div>`;
+  it.innerHTML = `<div class="nc-line"><span class="nc-grip" draggable="true" title="드래그해서 다른 날짜로 옮기기" aria-hidden="true">⋮⋮</span><span class="bul" role="button" title="완료 표시"><i></i>${CHECK}</span><textarea class="nc-t" rows="1" placeholder="할 일 입력" spellcheck="false" autocomplete="off" autocorrect="off" writingsuggestions="false"></textarea></div>`;
   const ta = it.querySelector('.nc-t'); ta.value = t ? t.t : ''; ta.style.cssText = t ? itemStyle(t.style) : '';
   if (t) ncPaint(it, t);
   const bul = it.querySelector('.bul'); bul.draggable = true; bul.title = '클릭: 완료 표시 · 드래그: 다른 날짜로 옮기기 (Ctrl 누르면 복사)';
@@ -3379,7 +3380,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1793663643';
+const APP_BUILD = '1793749270';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
