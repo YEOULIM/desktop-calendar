@@ -579,6 +579,32 @@ pre.code{background:var(--field);border:1px solid var(--line);border-radius:8px;
 .rlist li span{flex:1;min-width:0}
 .rlist li small{color:var(--ink-3)}
 .hidden{display:none!important}
+.yearly{flex:1;min-height:0;overflow:auto;padding:2px 16px 16px}
+.yr-y{font-size:calc(14px*var(--fs));font-weight:800;color:var(--ink-2);margin:10px 2px 8px}
+.yr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.yr-m{display:flex;flex-direction:column;min-height:150px;border:1px solid var(--line);border-radius:12px;padding:10px 10px 6px;background:rgb(var(--glass-rgb) / .45)}
+.yr-m.cur{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.yr-m.drop{background:var(--accent-soft);border-color:var(--accent)}
+.yr-m header{display:flex;align-items:baseline;gap:6px;margin-bottom:4px}
+.yr-m header b{font-size:calc(16px*var(--fs));font-weight:800}
+.yr-m header small{margin-left:auto;color:var(--ink-3);font-size:calc(11.5px*var(--fs));font-weight:600}
+.yr-now{font-size:calc(10.5px*var(--fs));font-weight:700;color:var(--accent)}
+.yr-evs{display:flex;flex-wrap:wrap;gap:3px;margin:2px 0 4px}
+.yr-ev{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:5px;padding:1px 7px;font-size:calc(11px*var(--fs));font-weight:600;color:#fff;cursor:pointer}
+.yr-ev.dark{color:var(--ink)}
+.yr-list{flex:1}
+.yr-list .todo{padding:3px 22px 3px 2px}
+.yr-list .txt{cursor:text;word-break:keep-all;overflow-wrap:anywhere}
+.yr-list .todo.dragging{opacity:.4}
+.yr-edit{width:100%;border:0;border-bottom:1px solid var(--accent);background:transparent;outline:none;padding:0;font:inherit}
+.yr-x{position:absolute;right:2px;top:3px;border:0;background:transparent;color:var(--ink-3);font-size:12px;width:20px;height:20px;border-radius:6px;opacity:0}
+.yr-list .todo:hover .yr-x{opacity:1}
+.yr-x:hover{background:var(--accent-soft);color:var(--ink)}
+.yr-add{width:100%;border:0;border-top:1px dashed var(--line-2);background:transparent;padding:7px 2px 3px;margin-top:4px;outline:none;font:inherit;font-size:calc(13px*var(--fs))}
+.yr-add::placeholder{color:var(--ink-3)}
+.yr-add:focus{border-top-color:var(--accent);border-top-style:solid}
+#ymBtn.yr-mode{pointer-events:none} #ymBtn.yr-mode .ym-caret{display:none}
+@media (max-width:760px){.yr-grid{grid-template-columns:1fr}.yr-m{min-height:0}.yearly{padding:2px 10px 12px}.yr-x{opacity:1}}
 input[type=range],input[type=checkbox]{accent-color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:rgb(var(--glass-rgb));padding:8px 14px;border-radius:10px;font-size:calc(13px*var(--fs));opacity:0;transition:opacity .2s;pointer-events:none;z-index:70}
 .toast.on{opacity:1}
@@ -651,6 +677,7 @@ input[type=range],input[type=checkbox]{accent-color:var(--accent)}
     <div class="dow" id="dow"></div>
     <div class="grid" id="grid"></div>
     <div class="daily hidden" id="daily"></div>
+    <div class="yearly hidden" id="yearly"></div>
   </section>
   <div id="splitter" role="separator" aria-orientation="vertical" aria-label="패널 크기 조절" title="드래그해서 크기 조절"></div>
 
@@ -1027,7 +1054,7 @@ function fetchCN(year) {
 
 /* ======================== 상태 ======================== */
 const DEF_CATS = [{ id: 'work', name: '업무', color: '#2b7a6f', on: true }, { id: 'plan', name: '일정', color: '#3566d4', on: true }];
-const DEF_STATE = { v: 5, del: {}, rtime: {}, cats: [], events: [], dayColor: {}, updatedAt: 0, daily: {}, weekly: {}, monthly: {}, routines: [], rdone: {}, customHol: [], alarms: [] };
+const DEF_STATE = { v: 5, del: {}, rtime: {}, cats: [], events: [], dayColor: {}, updatedAt: 0, daily: {}, weekly: {}, monthly: {}, yearly: {}, routines: [], rdone: {}, customHol: [], alarms: [] };
 const DEF_PREFS = { weekStart: 0, theme: 'auto', lunar: true, kr: true, cn: true, cnWork: true, showAlarm: true, showMemo: true, carry: true, cardW: 300, cardH: 340, glass: 0.74, wall: 'mist',
   widget: false, ww: 1180, wh: 700, wx: 60, wy: 60, side: 300, sideLeft: true, collapsed: false,
   font: 'pretendard', fw: 400, fs: 1, fsD: 1, rolling: true, viewMode: 'cal', dayS: 8, dayE: 22, colors: {}, sound: 'chime', vol: 0.7 };
@@ -1158,7 +1185,7 @@ let todayK = key(new Date());
 
 function collectIds(st) {
   const ids = new Set();
-  ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(st[sc] || {}).forEach(L => L.forEach(x => ids.add(x.id))));
+  ['daily', 'weekly', 'monthly', 'yearly'].forEach(sc => Object.values(st[sc] || {}).forEach(L => L.forEach(x => ids.add(x.id))));
   ['routines', 'alarms', 'events'].forEach(f => (st[f] || []).forEach(x => ids.add(x.id)));
   return ids;
 }
@@ -1166,7 +1193,7 @@ function collectIds(st) {
 const itemSig = x => { const { u, ...r } = x; return JSON.stringify(r); };
 function allItems(st) {
   const L = [];
-  ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(st[sc] || {}).forEach(A => A.forEach(x => L.push(x))));
+  ['daily', 'weekly', 'monthly', 'yearly'].forEach(sc => Object.values(st[sc] || {}).forEach(A => A.forEach(x => L.push(x))));
   ['routines', 'alarms', 'events'].forEach(f => (st[f] || []).forEach(x => L.push(x)));
   return L;
 }
@@ -1339,8 +1366,10 @@ function holidayLines(info) {
 function render() {
   { const w = state.cats.find(c => c.id === 'work') || state.cats[0]; document.documentElement.style.setProperty('--donec', w.color); }
   renderMini();
-  const isDaily = prefs.viewMode === 'daily';
-  ['#dow', '#grid'].forEach(x => $(x).classList.toggle('hidden', isDaily)); $('#daily').classList.toggle('hidden', !isDaily);
+  const isDaily = prefs.viewMode === 'daily', isYear = prefs.viewMode === 'year';
+  ['#dow', '#grid'].forEach(x => $(x).classList.toggle('hidden', isDaily || isYear)); $('#daily').classList.toggle('hidden', !isDaily); $('#yearly').classList.toggle('hidden', !isYear);
+  document.querySelector('.cal-head .nav').classList.toggle('hidden', isYear); $('#ymBtn').classList.toggle('yr-mode', isYear);
+  if (isYear) { renderYear(); renderSide(); return; }
   { const noM = !isDaily && (!prefs.rolling || !isWide()); $('#prevM').hidden = noM; $('#nextM').hidden = noM; }   // < > 가 이미 한 달씩이면 >> 숨김
   if (isDaily) { renderDaily(); renderSide(); return; }
   $('#mNum').textContent = view.getMonth() + 1;
@@ -1522,7 +1551,7 @@ function renderSide() {
     <div>
       <div class="day-title"><h2>${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일</h2><span>${k === todayK ? '오늘' : ''}${l ? ` 음 ${l.leap ? '윤' : ''}${l.m}.${l.d}` : ''}</span>${k !== todayK ? `<button class="side-today" data-sidetoday title="왼쪽 패널을 오늘로 되돌리기">오늘로</button>` : ''}<button class="day-color-btn" data-daycolor="${k}" title="이 날짜 배경색" aria-label="이 날짜 배경색" style="background:${(state.dayColor || {})[k] || 'transparent'}"></button></div>
       ${tags ? `<div class="day-tags">${tags}</div>` : ''}
-      <div class="vtabs" role="tablist" id="vtabs"><button role="tab" data-view="cal" aria-selected="${prefs.viewMode !== 'daily'}">캘린더</button><button role="tab" data-view="daily" aria-selected="${prefs.viewMode === 'daily'}">데일리</button></div>
+      <div class="vtabs" role="tablist" id="vtabs"><button role="tab" data-view="cal" aria-selected="${prefs.viewMode !== 'daily' && prefs.viewMode !== 'year'}">먼슬리</button><button role="tab" data-view="daily" aria-selected="${prefs.viewMode === 'daily'}">데일리</button><button role="tab" data-view="year" aria-selected="${prefs.viewMode === 'year'}">연간계획</button></div>
     </div>
     <div class="sec cats">
       <h3><button class="cat-fold" data-catfold aria-expanded="${catOpen}"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 4.5 3 3 3-3"/></svg>카테고리</button>
@@ -2271,7 +2300,7 @@ $('#dImport').onchange = e => {
 
 /* ======================== 자동 기록 (되돌리기용) ======================== */
 function countItems(st) {
-  let n = 0; ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(st[sc] || {}).forEach(L => n += L.length));
+  let n = 0; ['daily', 'weekly', 'monthly', 'yearly'].forEach(sc => Object.values(st[sc] || {}).forEach(L => n += L.length));
   return n + (st.events || []).length + (st.routines || []).length + (st.alarms || []).length;
 }
 function pushHistory(label, st = state) {
@@ -2307,7 +2336,7 @@ function mergeStates(a, b) {
   const o = normalize(JSON.parse(JSON.stringify(older)));
   out.del = Object.assign({}, o.del, out.del);
   const dead = id => !!out.del[id];
-  const SC = ['daily', 'weekly', 'monthly'];
+  const SC = ['daily', 'weekly', 'monthly', 'yearly'];
   // 지운 항목 정리
   SC.forEach(sc => Object.keys(out[sc]).forEach(k => { out[sc][k] = out[sc][k].filter(x => !dead(x.id)); if (!out[sc][k].length) delete out[sc][k]; }));
   ['routines', 'alarms', 'events'].forEach(f => { out[f] = (out[f] || []).filter(x => !dead(x.id)); });
@@ -2696,7 +2725,7 @@ let newCatColor = CAT_COLORS[6], ccTarget = null;
 function catCount(id) {
   let n = 0; const first = state.cats[0].id;
   const m = x => (x.cat || first) === id;
-  ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(state[sc]).forEach(L => L.forEach(x => { if (m(x)) n++; })));
+  ['daily', 'weekly', 'monthly', 'yearly'].forEach(sc => Object.values(state[sc]).forEach(L => L.forEach(x => { if (m(x)) n++; })));
   state.routines.forEach(x => { if (m(x)) n++; }); state.alarms.forEach(x => { if (m(x)) n++; });
   return n;
 }
@@ -2729,7 +2758,7 @@ $('#cList').addEventListener('click', e => {
   if (!del.dataset.armed) { del.dataset.armed = '1'; del.textContent = '정말 삭제'; del.className = 'btn sm'; del.style.background = 'var(--kr)'; del.style.color = '#fff'; setTimeout(() => { if (del.isConnected) drawCats(); }, 3000); return; }
   const idx = state.cats.findIndex(c => c.id === id), fallback = state.cats[idx === 0 ? 1 : 0];
   const first = state.cats[0].id, fix = x => { if ((x.cat || first) === id) x.cat = fallback.id; };
-  ['daily', 'weekly', 'monthly'].forEach(sc => Object.values(state[sc]).forEach(L => L.forEach(fix)));
+  ['daily', 'weekly', 'monthly', 'yearly'].forEach(sc => Object.values(state[sc]).forEach(L => L.forEach(fix)));
   state.routines.forEach(fix); state.alarms.forEach(fix);
   state.cats.splice(idx, 1);
   if (prefs.lastCat === id) prefs.lastCat = fallback.id;
@@ -3102,6 +3131,84 @@ dailyEl.addEventListener('drop', e => {
 document.addEventListener('dragend', () => { dDrag = null; document.querySelectorAll('#daily .bsel').forEach(b => b.remove()); });
 
 // 탭 전환
+/* ======================== 연간 계획 ======================== */
+// 이번 달부터 내년 12월까지, 달마다 계획 목록 (state.yearly['2026-12'] = [...])
+function yearMonths() { const t = new Date(), out = []; for (let d = new Date(t.getFullYear(), t.getMonth(), 1); d.getFullYear() <= t.getFullYear() + 1; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) out.push(d); return out; }
+let yEdit = null;   // 수정 중인 계획 id
+function renderYear() {
+  const el = $('#yearly'), months = yearMonths(), curK = todayK.slice(0, 7);
+  const first = months[0], last = months[months.length - 1];
+  $('#mNum').textContent = ''; $('#mYear').textContent = `연간 계획 · ${first.getFullYear()}.${first.getMonth() + 1} – ${last.getFullYear()}.${last.getMonth() + 1}`;
+  const keep = document.activeElement && document.activeElement.classList.contains('yr-add') ? document.activeElement.closest('[data-ym]').dataset.ym : null;
+  const scrollTop = el.scrollTop;
+  let h = '', y0 = null;
+  months.forEach(m => {
+    const y = m.getFullYear();
+    if (y !== y0) { if (y0 !== null) h += '</div>'; h += `<h3 class="yr-y">${y}년</h3><div class="yr-grid">`; y0 = y; }
+    const mk = `${y}-${pad(m.getMonth() + 1)}`, L = (state.yearly || {})[mk] || [];
+    const items = [...L.filter(x => !x.done), ...L.filter(x => x.done)], dn = L.filter(x => x.done).length;
+    const mEnd = key(new Date(y, m.getMonth() + 1, 0)), evs = (state.events || []).filter(e => e.start <= mEnd && e.end >= mk + '-01');
+    h += `<section class="yr-m${mk === curK ? ' cur' : ''}" data-ym="${mk}">
+      <header><b>${m.getMonth() + 1}월</b>${mk === curK ? '<span class="yr-now">이번 달</span>' : ''}${L.length ? `<small>${dn}/${L.length}</small>` : ''}</header>
+      ${evs.length ? `<div class="yr-evs">${evs.map(e => { const c = e.color || catOf(e).color; return `<span class="yr-ev${lum(c) > .5 ? ' dark' : ''}" data-evid="${e.id}" title="${esc(evRange(e) + ' ' + e.t)}" style="background:${c}">${esc(e.t)}</span>`; }).join('')}</div>` : ''}
+      <ul class="todos yr-list">${items.map(x => `<li class="todo${x.done ? ' done' : ''}" data-id="${x.id}" draggable="${yEdit === x.id ? 'false' : 'true'}">
+        <button class="chk" data-yact="toggle" aria-label="완료 표시">${CHECK}</button>
+        <div class="tbody">${yEdit === x.id ? `<input class="yr-edit" value="${esc(x.t)}" enterkeyhint="done">` : `<span class="txt" data-yact="edit" title="눌러서 수정">${esc(x.t)}</span>`}</div>
+        <button class="yr-x" data-yact="del" title="삭제" aria-label="삭제">✕</button></li>`).join('')}</ul>
+      <input class="yr-add" placeholder="+ 계획 추가" enterkeyhint="done" aria-label="${m.getMonth() + 1}월 계획 추가">
+    </section>`;
+  });
+  el.innerHTML = h + '</div>';
+  el.scrollTop = scrollTop;
+  const ed = el.querySelector('.yr-edit'); if (ed) { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }
+  else if (keep) { const a = el.querySelector(`[data-ym="${keep}"] .yr-add`); if (a) a.focus(); }
+}
+const yList = mk => ((state.yearly = state.yearly || {})[mk] = state.yearly[mk] || []);
+const yFind = id => { for (const [mk, L] of Object.entries(state.yearly || {})) { const i = L.findIndex(x => x.id === id); if (i >= 0) return { mk, L, i, x: L[i] }; } return null; };
+const yClean = mk => { if (state.yearly[mk] && !state.yearly[mk].length) delete state.yearly[mk]; };
+const yearEl = $('#yearly');
+yearEl.addEventListener('click', e => {
+  const evb = e.target.closest('.yr-ev'); if (evb) return openEvent({ edit: evb.dataset.evid });
+  const b = e.target.closest('[data-yact]'); if (!b) return;
+  const f = yFind(b.closest('li').dataset.id); if (!f) return;
+  const a = b.dataset.yact;
+  if (a === 'toggle') { f.x.done = !f.x.done; save(); renderYear(); }
+  else if (a === 'del') { f.L.splice(f.i, 1); yClean(f.mk); save(); renderYear(); }
+  else if (a === 'edit') { yEdit = f.x.id; renderYear(); }
+});
+function yCommit(inp) {
+  const f = yFind(yEdit); yEdit = null; if (!f) return renderYear();
+  const v = inp.value.trim();
+  if (!v) { f.L.splice(f.i, 1); yClean(f.mk); } else if (v !== f.x.t) f.x.t = v;
+  save(); renderYear();
+}
+yearEl.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.classList.contains('yr-add')) {
+    if (e.key === 'Escape') { t.value = ''; t.blur(); return; }
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault(); const v = t.value.trim(); if (!v) return;
+    yList(t.closest('[data-ym]').dataset.ym).push({ id: uid(), t: v, done: false });
+    t.value = ''; save(); renderYear();
+  } else if (t.classList.contains('yr-edit')) {
+    if (e.key === 'Escape') { yEdit = null; return renderYear(); }
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault(); yCommit(t);
+  }
+});
+yearEl.addEventListener('focusout', e => { if (e.target.classList.contains('yr-edit') && yEdit) setTimeout(() => { if (yEdit && e.target.isConnected) yCommit(e.target); }, 0); });
+// 다른 달로 드래그해서 옮기기
+let yDrag = null;
+yearEl.addEventListener('dragstart', e => { const li = e.target.closest && e.target.closest('.yr-list li'); if (!li) return; yDrag = li.dataset.id; li.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', li.textContent.trim()); } catch (_) {} });
+yearEl.addEventListener('dragover', e => { if (!yDrag) return; const m = e.target.closest('.yr-m'); if (!m) return; e.preventDefault(); yearEl.querySelectorAll('.yr-m.drop').forEach(x => x !== m && x.classList.remove('drop')); m.classList.add('drop'); });
+yearEl.addEventListener('dragend', () => { yDrag = null; yearEl.querySelectorAll('.drop,.dragging').forEach(x => x.classList.remove('drop', 'dragging')); });
+yearEl.addEventListener('drop', e => {
+  const m = e.target.closest('.yr-m'); if (!yDrag || !m) return; e.preventDefault();
+  const f = yFind(yDrag), to = m.dataset.ym; yDrag = null;
+  if (f && f.mk !== to) { f.L.splice(f.i, 1); yClean(f.mk); yList(to).push(f.x); save(); }
+  renderYear();
+});
+
 $('#side').addEventListener('click', e => {
   if (!e.target.closest('#vtabs')) return;
   const b = e.target.closest('[data-view]'); if (!b) return;
@@ -3264,6 +3371,7 @@ function searchTodos(q) {
     L.forEach(x => push('weekly', k, x, d, `${String(y).slice(2)}년 ${w}주차`));
   });
   Object.entries(state.monthly).forEach(([k, L]) => { const d = parse(k + '-01'); L.forEach(x => push('monthly', k, x, d, `${String(d.getFullYear()).slice(2)}년 ${d.getMonth() + 1}월`)); });
+  Object.entries(state.yearly || {}).forEach(([k, L]) => { const d = parse(k + '-01'); L.forEach(x => push('yearly', k, x, d, `${String(d.getFullYear()).slice(2)}년 ${d.getMonth() + 1}월 계획`)); });
   (state.events || []).forEach(ev => { if (ev.t.toLowerCase().includes(q) || (ev.memo || '').toLowerCase().includes(q)) out.push({ ev, date: parse(ev.start), label: evRange(ev), x: { t: ev.t, memo: ev.memo } }); });
   state.routines.forEach(r => { if (r.t.toLowerCase().includes(q)) out.push({ routine: r, date: parse(r.start || todayK), label: '반복 작업', x: { t: r.t, memo: freqLabel(r) } }); });
   return out.sort((a, b) => b.date - a.date).slice(0, 80);
@@ -3380,7 +3488,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1793749270';
+const APP_BUILD = '1795426000';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
