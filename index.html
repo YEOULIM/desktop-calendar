@@ -589,7 +589,10 @@ pre.code{background:var(--field);border:1px solid var(--line);border-radius:8px;
 .yr-m header b{font-size:calc(16px*var(--fs));font-weight:800}
 .yr-m header small{margin-left:auto;color:var(--ink-3);font-size:calc(11.5px*var(--fs));font-weight:600}
 .yr-now{font-size:calc(10.5px*var(--fs));font-weight:700;color:var(--accent)}
-.yr-evs{display:flex;flex-wrap:wrap;gap:3px;margin:2px 0 4px}
+.yr-evs{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin:2px 0 4px}
+.yr-hols{display:flex;flex-direction:column;gap:1px;margin:0 0 4px}
+.yr-hol{font-size:calc(11.5px*var(--fs));font-weight:600;color:var(--kr)}
+.yr-hol b{font-weight:700;margin-right:2px}
 .yr-ev{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:5px;padding:1px 7px;font-size:calc(11px*var(--fs));font-weight:600;color:#fff;cursor:pointer}
 .yr-ev.dark{color:var(--ink)}
 .yr-list{flex:1}
@@ -3148,8 +3151,14 @@ function renderYear() {
     const mk = `${y}-${pad(m.getMonth() + 1)}`, L = (state.yearly || {})[mk] || [];
     const items = [...L.filter(x => !x.done), ...L.filter(x => x.done)], dn = L.filter(x => x.done).length;
     const mEnd = key(new Date(y, m.getMonth() + 1, 0)), evs = (state.events || []).filter(e => e.start <= mEnd && e.end >= mk + '-01');
+    const hol = [];   // 이 달 공휴일: 이어지는 같은 이름(설날 연휴·설날)은 한 줄로
+    for (let d = new Date(y, m.getMonth(), 1); d.getMonth() === m.getMonth(); d = addDays(d, 1)) {
+      dayInfo(d).kr.forEach(n => { const nm = n.replace(/ 연휴$/, ''), g = hol.find(x => x.nm === nm && key(addDays(x.end, 1)) === key(d)); if (g) g.end = d; else if (!hol.some(x => x.nm === nm && key(x.end) === key(d))) hol.push({ nm, start: d, end: d }); });
+    }
+    const md = d => `${d.getMonth() + 1}.${d.getDate()}`;
     h += `<section class="yr-m${mk === curK ? ' cur' : ''}" data-ym="${mk}">
       <header><b>${m.getMonth() + 1}월</b>${mk === curK ? '<span class="yr-now">이번 달</span>' : ''}${L.length ? `<small>${dn}/${L.length}</small>` : ''}</header>
+      ${hol.length ? `<div class="yr-hols">${hol.map(x => `<span class="yr-hol"><b>${md(x.start)}${x.end > x.start ? '–' + md(x.end) : ''}</b> ${esc(x.nm)}</span>`).join('')}</div>` : ''}
       ${evs.length ? `<div class="yr-evs">${evs.map(e => { const c = e.color || catOf(e).color; return `<span class="yr-ev${lum(c) > .5 ? ' dark' : ''}" data-evid="${e.id}" title="${esc(evRange(e) + ' ' + e.t)}" style="background:${c}">${esc(e.t)}</span>`; }).join('')}</div>` : ''}
       <ul class="todos yr-list">${items.map(x => `<li class="todo${x.done ? ' done' : ''}" data-id="${x.id}" draggable="${yEdit === x.id ? 'false' : 'true'}">
         <button class="chk" data-yact="toggle" aria-label="완료 표시">${CHECK}</button>
@@ -3488,7 +3497,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1795426000';
+const APP_BUILD = '1795426215';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
