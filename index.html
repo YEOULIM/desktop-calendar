@@ -595,7 +595,8 @@ pre.code{background:var(--field);border:1px solid var(--line);border-radius:8px;
 .yr-hol b{font-weight:700;margin-right:2px}
 .yr-ev{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:5px;padding:1px 7px;font-size:calc(11px*var(--fs));font-weight:600;color:#fff;cursor:pointer}
 .yr-ev.dark{color:var(--ink)}
-.yr-list{flex:1}
+.yr-list{flex:1;font-size:var(--side-px,14px)}
+.yr-add,.yr-edit{font-size:var(--side-px,14px)!important}
 .yr-list .todo{padding:3px 22px 3px 2px}
 .yr-list .txt{cursor:text;word-break:keep-all;overflow-wrap:anywhere}
 .yr-list .todo.dragging{opacity:.4}
@@ -1324,7 +1325,7 @@ function applyPrefs() {
   if (prefs.theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prefs.theme);
   root.style.setProperty('--glass-a', prefs.glass);
   root.style.setProperty('--calscale', prefs.calPx / 11.5); root.style.setProperty('--fs', 1); root.style.setProperty('--fs-d', prefs.datePx / 13.5);
-  $('#side').style.setProperty('--fs', prefs.sidePx / 14); document.querySelector('.cal').style.setProperty('--fs', prefs.calPx / 11.5); root.style.setProperty('--fw', prefs.fw);
+  $('#side').style.setProperty('--fs', prefs.sidePx / 14); root.style.setProperty('--side-px', prefs.sidePx + 'px'); document.querySelector('.cal').style.setProperty('--fs', prefs.calPx / 11.5); root.style.setProperty('--fw', prefs.fw);
   loadFont(prefs.font);
   root.style.setProperty('--font', (FONTS[prefs.font] || FONTS.pretendard).stack + ',"Pretendard Variable",Pretendard');
   COLOR_TARGETS.forEach(([t]) => { if (prefs.colors[t]) root.style.setProperty('--' + t, prefs.colors[t]); else root.style.removeProperty('--' + t); });
@@ -3497,7 +3498,7 @@ $('#sync').addEventListener('click', () => {
 
 /* ======================== 새로고침 버튼 ======================== */
 // 누르면 깃허브에 올린 최신 파일로 새로 불러와요 (자동으로 확인하지 않음)
-const APP_BUILD = '1795426231';
+const APP_BUILD = '1795477689';
 function hardReload() { location.replace(location.pathname + '?v=' + Date.now()); }
 $('#reloadBtn').onclick = () => { if (card.k) closeCard(); hardReload(); };
 { const d = new Date(+APP_BUILD * 1000); if (!isNaN(d)) $('#verInfo').textContent = `현재 버전: ${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
